@@ -89,32 +89,54 @@ function openActivityModal(id=null){editingId=id;const old=activities.find(a=>a.
  const form=$('#activityForm',modal);form.reset();$('#activityModalTitle',modal).textContent=id?'Edit Activity':'Add Activity';form.elements.date.value=old.date;form.elements.time.value=old.time;form.elements.name.value=old.name;form.elements.description.value=old.description;form.elements.output.value=old.output;form.elements.status.value=old.status;form.elements.priority.value=old.priority;form.elements.notes.value=old.notes;form.elements.unit.innerHTML=units.map(u=>`<option ${u===old.unit?'selected':''}>${escapeHtml(u)}</option>`).join('');$('#existingPhotos',modal).innerHTML=(old.photos||[]).map(src=>`<img src="${src}" class="photo-thumb">`).join('');modal.classList.add('open');
 }
 async function saveActivityForm(e){e.preventDefault();const f=e.currentTarget;const old=activities.find(a=>a.id===editingId);let photos=old?.photos||[];const input=f.elements.photos;const newFiles=[...(input.files||[])].filter(file=>file.type.startsWith('image/'));for(const file of newFiles){photos.push(await fileToDataURL(file));}const obj={id:editingId||crypto.randomUUID(),date:f.elements.date.value,time:f.elements.time.value,name:f.elements.name.value.trim(),unit:f.elements.unit.value,status:f.elements.status.value,priority:f.elements.priority.value,output:f.elements.output.value.trim(),description:f.elements.description.value.trim(),notes:f.elements.notes.value.trim(),photos};if(!obj.date||!obj.name){toast('Date dan nama aktivitas wajib diisi.');return;}if(editingId)activities=activities.map(a=>a.id===editingId?obj:a);else activities.push(obj);selectedDate=obj.date;shownMonth=new Date(obj.date+'T12:00:00');try{save();}catch(err){toast('Data gagal disimpan di browser. Kurangi ukuran/jumlah foto.');return;}let folderSaved=0,folderErrors=[];for(const file of newFiles){try{await saveWorkPhotoToProjectAssets(file,obj.date,obj.name);folderSaved++;}catch(err){folderErrors.push(err.message||'gagal menyimpan file');}}$('#activityModal').classList.remove('open');renderPage();toast(folderErrors.length?`Aktivitas tersimpan. ${folderSaved} foto masuk assets/work; foto lain gagal disimpan ke folder (${folderErrors[0]}).`:newFiles.length?`Aktivitas tersimpan dan ${newFiles.length} foto disalin ke assets/work.`:(editingId?'Aktivitas diperbarui.':'Aktivitas ditambahkan.'));}
-function fileToDataURL(file){
- return new Promise((resolve,reject)=>{
-  const reader=new FileReader();
-  reader.onerror=()=>reject(new Error('File tidak bisa dibaca.'));
-  reader.onload=()=>{
-   const source=reader.result;
-   // SVG is already vector-based; keep it intact. Raster logos are resized/compressed
-   // before localStorage to reduce the chance of browser storage quota errors.
-   if(file.type==='image/svg+xml'){resolve(source);return;}
-   const img=new Image();
-   img.onerror=()=>reject(new Error('Format gambar tidak dapat diproses.'));
-   img.onload=()=>{
-    const max=256,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
-    const canvas=document.createElement('canvas');
-    canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
-    canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
-    const ctx=canvas.getContext('2d');
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);
-    try{resolve(canvas.toDataURL('image/webp',0.68));}
-    catch(err){reject(err);}
-   };
-   img.src=source;
-  };
-  reader.readAsDataURL(file);
- });
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error('File tidak bisa dibaca.'));
+
+    reader.onload = () => {
+      const source = reader.result;
+
+      if (file.type === 'image/svg+xml') {
+        resolve(source);
+        return;
+      }
+
+      const img = new Image();
+
+      img.onerror = () => reject(new Error('Format gambar tidak dapat diproses.'));
+
+      img.onload = () => {
+        // Simpan foto dengan resolusi lebih tinggi.
+        const max = 1600;
+        const scale = Math.min(
+          1,
+          max / Math.max(img.naturalWidth, img.naturalHeight)
+        );
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        try {
+          resolve(canvas.toDataURL('image/webp', 0.85));
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      img.src = source;
+    };
+
+    reader.readAsDataURL(file);
+  });
 }
+
 function renderCalendarPage(){const root=$('#pageContent');if(!root)return;root.innerHTML=`<div class="grid two-col"><section class="panel"><div class="panel-head"><div><h2>Activity Calendar</h2><p>Titik merah menandakan tanggal memiliki aktivitas.</p></div><button class="btn small" id="todayBtn">Today</button><button class="btn primary small" id="setTomorrowStatus">Jadwal Besok</button></div><div id="fullCalendar">${calendarMarkup(shownMonth)}</div><div class="footnote">Klik tanggal untuk membuka daftar aktivitasnya.</div></section><section class="panel"><div class="panel-head"><div><h2 id="selectedDateTitle">${fmtDate(selectedDate,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</h2><p>Aktivitas pada tanggal yang dipilih</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="setWorkdayStatus">Workday Status</button><button class="btn primary small" data-open-activity>＋ Tambah</button></div></div><div id="workdayStatusInfo"></div><div class="activity-list">${activities.filter(a=>a.date===selectedDate).sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(a=>activityRow(a)+`<div class="row-actions" style="justify-content:flex-end;margin-top:-5px"><button class="btn small" data-edit="${a.id}">Edit</button><button class="btn danger small" data-delete="${a.id}">Hapus</button></div>`).join('')||'<div class="empty">Belum ada aktivitas.</div>'}</div></section></div>`;
  root.querySelectorAll('[data-month]').forEach(b=>b.addEventListener('click',()=>{shownMonth=new Date(shownMonth.getFullYear(),shownMonth.getMonth()+Number(b.dataset.month),1);renderCalendarPage();}));root.querySelectorAll('[data-date]').forEach(b=>b.addEventListener('click',()=>{selectedDate=b.dataset.date;renderCalendarPage();}));root.querySelector('#todayBtn').onclick=()=>{selectedDate=iso(today);shownMonth=new Date(today.getFullYear(),today.getMonth(),1);renderCalendarPage();};root.querySelector('#setTomorrowStatus').onclick=()=>{const tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);openWorkdayStatusModal(iso(tomorrow));};root.querySelector('[data-open-activity]').onclick=()=>openActivityModal();root.querySelector('#setWorkdayStatus').onclick=()=>openWorkdayStatusModal(selectedDate);renderWorkdayStatusInfo(root,selectedDate);bindActivityActions(root);
 }
