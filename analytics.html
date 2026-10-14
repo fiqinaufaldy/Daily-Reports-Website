@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f4f7f4">
+<title>Daily Reports — Analytics</title>
+<script>try{const t=localStorage.getItem("dailyflow_theme_v1");if(t==="dark"||t==="light"){document.documentElement.dataset.theme=t;document.addEventListener("DOMContentLoaded",()=>{document.body.dataset.theme=t;});}}catch{}</script>
+  <link rel="stylesheet" href="styles.css">
+<script defer src="app.js"></script>
+</head>
+<body data-page="analytics">
+<div class="app">
+<aside class="sidebar">
+  <a class="brand" href="index.html"><span class="brand-mark"><img src="assets/daily-reports-mark.png" alt="Daily Reports logo"></span><span>Daily Reports</span></a>
+  <nav class="nav" id="sidebarNav" aria-label="Navigasi utama"></nav>
+  <div class="profile"><div class="avatar">FN</div><div><strong>Fiqi Naufaldy</strong><small>Digital Marketing</small></div></div>
+  <div class="sidebar-copyright">© 2026 with <span class="copyright-heart" aria-label="love">♥</span> by Fiqi Naufaldy</div>
+</aside>
+<main class="main">
+  <header class="topbar">
+    <div class="greeting"><h1 id="greeting">Good Afternoon, Fiqi 👋</h1><p id="todayText"></p></div>
+    <div class="top-actions"><input class="search" id="globalSearch" type="search" placeholder="⌕  Search anything..."><button class="icon-btn" title="Notifikasi" onclick="location.href='reminder.html'"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M15 17a3 3 0 1 1-6 0M6 9v3.528a2 2 0 0 1-.211.894l-1.717 3.433a.1.1 0 0 0 .09.145h15.676a.1.1 0 0 0 .09-.145l-1.717-3.433a2 2 0 0 1-.211-.894V9A6 6 0 0 0 6 9Z"/></svg></button><button class="icon-btn" id="themeToggle" title="Ganti tema"><svg viewBox="0 0 25 24" aria-hidden="true"><path fill="currentColor" d="m16.07 3.344l-1.428.781l1.428.781l.781 1.428l.781-1.428l1.428-.781l-1.428-.781l-.78-1.428zM2.226 12c0-5.523 4.477-10 10-10h1.734l-.868 1.5c-.579 1-.866 2.189-.866 3.5a7 7 0 0 0 8.348 6.87l1.682-.327l-.543 1.626A10 10 0 0 1 12.227 22c-5.523 0-10-4.477-10-10"/></svg></button></div>
+  </header>
+  <section class="page-intro"><h1>Analytics</h1><p>Pantau progres pekerjaan dan distribusi aktivitas per business unit.</p></section>
+  <div id="pageContent"></div>
+</main>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
