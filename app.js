@@ -35,6 +35,31 @@ const monthName = d => new Intl.DateTimeFormat('id-ID',{month:'long',year:'numer
 
 // Google Calendar Kreatif Desain (read-only).
 const CREATIVE_CALENDAR_API = 'https://script.google.com/macros/s/AKfycbzjaCBVIeq4Bagj3MaqGULyrWF2LtzaZdEtVusmVFwiuwnpGJbk74fxSxuj34kuMT9t/exec';
+const REMINDER_SYNC_API = CREATIVE_CALENDAR_API;
+
+// Kirim HANYA reminder baru ke Google Calendar Daily Reports.
+// Menggunakan text/plain + no-cors agar tidak memicu preflight CORS pada Apps Script.
+function syncNewReminderToGoogleCalendar(reminder) {
+  if (!reminder || !reminder.id || !reminder.title || !reminder.date) return;
+  const payload = {
+    action: 'createReminder',
+    id: String(reminder.id),
+    title: String(reminder.title),
+    date: String(reminder.date),
+    time: String(reminder.time || ''),
+    priority: String(reminder.priority || 'Medium'),
+    notes: String(reminder.notes || '')
+  };
+  fetch(REMINDER_SYNC_API, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).catch(error => {
+    console.error('Gagal mengirim reminder ke Google Calendar:', error);
+    toast('Reminder tersimpan di website, tetapi pengiriman ke Google Calendar gagal.');
+  });
+}
 let creativeCalendarEvents = [];
 let creativeCalendarState = 'loading';
 let creativeCalendarError = '';
@@ -233,7 +258,7 @@ function renderReminders(){
  $('#closeReminder').onclick=$('#cancelReminder').onclick=close;
  form.onsubmit=e=>{e.preventDefault();const f=e.currentTarget;const values={title:f.elements.title.value.trim(),date:f.elements.date.value,time:f.elements.time.value,priority:f.elements.priority.value,notes:f.elements.notes.value};
   if(editingReminderId){const existing=reminders.find(r=>r.id===editingReminderId);if(existing){Object.assign(existing,values);save();close();draw();toast('Perubahan reminder disimpan.');}}
-  else{reminders.push({id:crypto.randomUUID(),...values,done:false});save();close();draw();toast('Reminder ditambahkan.');}
+  else{const newReminder={id:crypto.randomUUID(),...values,done:false};reminders.push(newReminder);try{save();}catch(err){reminders=reminders.filter(r=>r.id!==newReminder.id);toast('Reminder gagal disimpan di browser.');return;}syncNewReminderToGoogleCalendar(newReminder);close();draw();toast('Reminder ditambahkan. Pengiriman ke Google Calendar dimulai.');}
  };
  const draw=()=>{const mode=$('#reminderFilter').value,q=$('#reminderSearch').value.toLowerCase();const arr=reminders.filter(r=>(mode==='all'||(mode==='done'?r.done:!r.done))&&r.title.toLowerCase().includes(q)).sort((a,b)=>a.date.localeCompare(b.date));
   $('#reminderRows').innerHTML=arr.map(r=>`<div class="panel"><div class="panel-head"><span class="tag ${r.done?'done':r.priority==='High'?'pending':r.priority==='Medium'?'progress':'blue'}">${r.done?'Selesai':escapeHtml(r.priority)}</span><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn small" data-reminder-edit="${r.id}">Edit</button><button class="btn danger small" data-reminder-delete="${r.id}">Hapus</button></div></div><h3 style="font-size:13px;margin:0 0 5px">${escapeHtml(r.title)}</h3><p class="muted" style="font-size:11px;margin:0 0 12px">${fmtDate(r.date,{weekday:'short',day:'numeric',month:'short',year:'numeric'})} ${r.time?'· '+escapeHtml(r.time):''}</p>${r.notes?`<p style="font-size:11px">${escapeHtml(r.notes)}</p>`:''}<button class="btn small ${r.done?'':'soft'}" data-reminder-toggle="${r.id}">${r.done?'Tandai aktif':'Tandai selesai'}</button></div>`).join('')||'<div class="empty">Tidak ada reminder.</div>';
