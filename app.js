@@ -408,3 +408,30 @@ document.addEventListener('paste',handleScreenshotPaste);
 window.addEventListener('resize',()=>{if(document.body.dataset.page==='analytics')renderAnalytics();});
 })();
 
+```javascript
+// Sync browser tab favicon with the uploaded profile photo.
+(function syncProfileFavicon() {
+  try {
+    const profile = JSON.parse(
+      localStorage.getItem('dailyflow_profile_v1') || '{}'
+    );
+
+    if (!profile.photo) return;
+
+    let favicon = document.querySelector('link[rel="icon"]');
+
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+
+    favicon.href = profile.photo;
+    favicon.type = profile.photo.startsWith('data:image/png')
+      ? 'image/png'
+      : 'image/jpeg';
+  } catch (error) {
+    console.warn('Favicon foto profil tidak dapat diperbarui.', error);
+  }
+})();
+```
