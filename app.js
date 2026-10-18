@@ -34,7 +34,7 @@ const fmtDate = (s, opts={day:'2-digit',month:'short',year:'numeric'}) => { cons
 const monthName = d => new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric'}).format(d);
 
 // Google Calendar Kreatif Desain (read-only).
-const CREATIVE_CALENDAR_API = 'https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnQ5-NI8dN5LERSzTqNBw7vV6d8C10EEJ6IdGjcDLRnIOlh1yD3phVght3-LmZyQU44h5ml6rkqkCiT4QoAVKYj-erudKlOtJrGspt78nvgsq4NU2TyvpcMpp7A5gLrG8Z2OL7AijZH6nZiVpAY1pwmch348J69qqaxpA-6K0JhSjTMKmlGsMNpRG7ZakgYIbKMq8Mv0k3AZBvLtrC85PKMvmsg25IW8eDl-nG1x5o26bUGTn2cBMlLmUOtS_MdzdCp3ejpQdzKBKS8TbYhhnm1K2dx4szQ3URrGBerg5wkL4zhgYYVgwo6kTBj4nouW9POzMu3PvnEKZs1RFbI&lib=MsPvENRmoHy_EBWKuyWiCJelAnQMyWtcW';
+const CREATIVE_CALENDAR_API = 'https://script.google.com/macros/s/AKfycbzrx5XD3w4vyP_q4ayL6SsFFmjFEofbSdrROxjMw-pJwioLLM1ENOwtLdPwOY13Cj1s/exec';
 let creativeCalendarEvents = [];
 let creativeCalendarState = 'loading';
 let creativeCalendarError = '';
