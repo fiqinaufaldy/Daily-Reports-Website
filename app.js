@@ -32,6 +32,76 @@ const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-$
 const parseDate = s => { const d = new Date(`${s}T12:00:00`); return Number.isNaN(+d) ? null : d; };
 const fmtDate = (s, opts={day:'2-digit',month:'short',year:'numeric'}) => { const d=parseDate(s); return d ? new Intl.DateTimeFormat('id-ID',opts).format(d) : '—'; };
 const monthName = d => new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric'}).format(d);
+
+// Google Calendar Kreatif Desain (read-only).
+const CREATIVE_CALENDAR_API = 'https://script.google.com/macros/s/AKfycbzrx5XD3w4vyP_q4ayL6SsFFmjFEofbSdrROxjMw-pJwioLLM1ENOwtLdPwOY13Cj1s/exec';
+let creativeCalendarEvents = [];
+let creativeCalendarState = 'loading';
+let creativeCalendarError = '';
+let creativeCalendarLoadedAt = null;
+let creativeCalendarRequestStarted = false;
+
+(function addCreativeCalendarStyles(){
+  if (document.getElementById('creativeCalendarStyles')) return;
+  const style = document.createElement('style');
+  style.id = 'creativeCalendarStyles';
+  style.textContent = `
+    .day.has-creative-events{position:relative;box-shadow:inset 0 0 0 1px rgba(139,92,246,.28)}
+    .creative-calendar-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#8b5cf6;margin-left:3px;vertical-align:middle}
+    .creative-calendar-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border,rgba(128,128,128,.25))}
+    .creative-calendar-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .creative-calendar-heading h3{margin:0;font-size:1rem}
+    .creative-calendar-event{border:1px solid rgba(139,92,246,.22);border-radius:10px;padding:10px;margin-bottom:8px}
+    .creative-event-mark{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:8px;background:rgba(139,92,246,.12);color:#8b5cf6;font-weight:700}
+    .tag.purple{background:rgba(139,92,246,.12);color:#8b5cf6}
+  `;
+  document.head.appendChild(style);
+})();
+
+function loadCreativeCalendarEvents(force=false) {
+  if (creativeCalendarRequestStarted && !force) return;
+  creativeCalendarRequestStarted = true;
+  creativeCalendarState = 'loading';
+  const callbackName = '__dailyReportsCalendarCallback_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  const script = document.createElement('script');
+  let finished = false;
+  const timeout = setTimeout(() => finish(new Error('Waktu koneksi habis.')), 15000);
+  function finish(error, payload) {
+    if (finished) return;
+    finished = true; clearTimeout(timeout);
+    try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+    script.remove();
+    if (error || !payload || payload.success !== true || !Array.isArray(payload.events)) {
+      creativeCalendarState = 'error';
+      creativeCalendarError = error ? error.message : (payload && payload.error) || 'Respons kalender tidak valid.';
+    } else {
+      creativeCalendarEvents = payload.events.map(event => ({
+        ...event,
+        date: event.start ? iso(new Date(event.start)) : '',
+        time: event.start && !event.allDay ? new Intl.DateTimeFormat('id-ID',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Jakarta'}).format(new Date(event.start)) : '',
+        endTime: event.end && !event.allDay ? new Intl.DateTimeFormat('id-ID',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Jakarta'}).format(new Date(event.end)) : ''
+      }));
+      creativeCalendarState = 'loaded';
+      creativeCalendarError = '';
+      creativeCalendarLoadedAt = new Date();
+    }
+    if (document.body.dataset.page === 'calendar') renderCalendarPage();
+  }
+  window[callbackName] = payload => finish(null, payload);
+  script.onerror = () => finish(new Error('Gagal memuat data Google Calendar.'));
+  script.src = CREATIVE_CALENDAR_API + (CREATIVE_CALENDAR_API.includes('?') ? '&' : '?') + 'callback=' + encodeURIComponent(callbackName);
+  document.head.appendChild(script);
+}
+
+function creativeEventsForDate(date) {
+  return creativeCalendarEvents.filter(event => event.date === date);
+}
+
+function creativeEventRow(event) {
+  const time = event.allDay ? 'Sepanjang hari' : (event.time || '—') + (event.endTime ? '–' + event.endTime : '');
+  return `<div class="activity creative-calendar-event" data-searchable><div class="activity-time">${escapeHtml(time)}</div><div><div class="activity-name">${escapeHtml(event.title || 'Tanpa judul')}</div><div class="activity-meta"><span class="tag purple">Google Calendar</span><span class="tag blue">Kreatif Desain</span></div></div><div class="creative-event-mark" aria-label="Event Google Calendar">G</div></div>`;
+}
+
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read = (key, fallback=[]) => { try { const v=JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; } };
 const write = (key, val) => localStorage.setItem(key, JSON.stringify(val));
@@ -72,7 +142,7 @@ function shell(){
 }
 function statsMarkup(){const total=activities.length,done=activities.filter(a=>a.status==='Done').length,prog=activities.filter(a=>a.status==='On Progress').length,pending=activities.filter(a=>a.status==='Pending').length;const pct=total?Math.round(done/total*100):0;return `<div class="grid stats"><div class="stat"><div class="stat-top">Total Activities <span class="stat-icon">${icon('total')}</span></div><strong>${total}</strong><small>Seluruh aktivitas yang tercatat</small></div><div class="stat"><div class="stat-top">Completed <span class="stat-icon">${icon('done')}</span></div><strong>${done}</strong><small>${pct}% completion</small></div><div class="stat"><div class="stat-top">On Progress <span class="stat-icon">${icon('progress')}</span></div><strong>${prog}</strong><small>Aktivitas berjalan</small></div><div class="stat"><div class="stat-top">Pending <span class="stat-icon">${icon('pending')}</span></div><strong>${pending}</strong><small>Perlu ditindaklanjuti</small></div></div>`;}
 function calendarMarkup(targetMonth=shownMonth, compact=false){const year=targetMonth.getFullYear(),month=targetMonth.getMonth(),first=new Date(year,month,1),start=(first.getDay()+6)%7,days=new Date(year,month+1,0).getDate(),prevDays=new Date(year,month,0).getDate();let html=`<div class="calendar-head"><button type="button" data-month="-1" aria-label="Bulan sebelumnya">‹</button><strong>${monthName(targetMonth)}</strong><button type="button" data-month="1" aria-label="Bulan berikutnya">›</button></div><div class="calendar-grid">${['Sen','Sel','Rab','Kam','Jum','Sab','Min'].map(x=>`<div class="weekday">${x}</div>`).join('')}`;
- for(let i=0;i<42;i++){let n=i-start+1,d,other=false;if(n<1){d=new Date(year,month-1,prevDays+n);other=true;}else if(n>days){d=new Date(year,month+1,n-days);other=true;}else d=new Date(year,month,n);const key=iso(d),has=activities.some(a=>a.date===key),wd=workdayStatuses.find(x=>x.date===key),wdClass=wd?'workday-'+String(wd.type).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''):'',cls=['day',other?'muted-day':'',key===selectedDate?'selected':'',key===iso(today)?'today':'',has?'has-items':'',wd?'has-workday-status':'',wdClass].filter(Boolean).join(' ');html+=`<button type="button" class="${cls}" data-date="${key}" title="${wd?escapeHtml(wd.type):''}">${d.getDate()}${wd?'<i class="workday-dot"></i>':''}</button>`;if(i>=start+days-1 && i>=34)break;}
+ for(let i=0;i<42;i++){let n=i-start+1,d,other=false;if(n<1){d=new Date(year,month-1,prevDays+n);other=true;}else if(n>days){d=new Date(year,month+1,n-days);other=true;}else d=new Date(year,month,n);const key=iso(d),has=activities.some(a=>a.date===key),hasCreative=creativeEventsForDate(key).length>0,wd=workdayStatuses.find(x=>x.date===key),wdClass=wd?'workday-'+String(wd.type).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''):'',cls=['day',other?'muted-day':'',key===selectedDate?'selected':'',key===iso(today)?'today':'',has?'has-items':'',hasCreative?'has-creative-events':'',wd?'has-workday-status':'',wdClass].filter(Boolean).join(' ');html+=`<button type="button" class="${cls}" data-date="${key}" title="${wd?escapeHtml(wd.type):''}">${d.getDate()}${wd?'<i class="workday-dot"></i>':''}${hasCreative?'<i class="creative-calendar-dot"></i>':''}</button>`;if(i>=start+days-1 && i>=34)break;}
  return html+'</div>';
 }
 function activityRow(a){const photo=a.photos?.[0],brand=unitBranding[a.unit]?.logo;return `<div class="activity" data-searchable><div class="activity-time">${escapeHtml(a.time||'—')}</div><div><div class="activity-name">${escapeHtml(a.name)}</div><div class="activity-desc">${escapeHtml(a.description||a.output||'Tanpa deskripsi')}</div><div class="activity-meta"><span class="tag blue">${brand?`<img class="activity-unit-logo" src="${brand}" alt="">`:''}${escapeHtml(a.unit||'Personal / Other')}</span><span class="tag ${statusClass(a.status)}">${statusLabel(a.status)}</span></div></div>${photo?`<img class="photo-thumb" src="${photo}" alt="Dokumentasi">`:`<div class="photo-thumb" style="display:grid;place-items:center;color:var(--muted)">＋</div>`}</div>`;}
@@ -137,9 +207,8 @@ function fileToDataURL(file) {
   });
 }
 
-function renderCalendarPage(){const root=$('#pageContent');if(!root)return;root.innerHTML=`<div class="grid two-col"><section class="panel"><div class="panel-head"><div><h2>Activity Calendar</h2><p>Titik merah menandakan tanggal memiliki aktivitas.</p></div><button class="btn small" id="todayBtn">Today</button><button class="btn primary small" id="setTomorrowStatus">Jadwal Besok</button></div><div id="fullCalendar">${calendarMarkup(shownMonth)}</div><div class="footnote">Klik tanggal untuk membuka daftar aktivitasnya.</div></section><section class="panel"><div class="panel-head"><div><h2 id="selectedDateTitle">${fmtDate(selectedDate,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</h2><p>Aktivitas pada tanggal yang dipilih</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="setWorkdayStatus">Workday Status</button><button class="btn primary small" data-open-activity>＋ Tambah</button></div></div><div id="workdayStatusInfo"></div><div class="activity-list">${activities.filter(a=>a.date===selectedDate).sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(a=>activityRow(a)+`<div class="row-actions" style="justify-content:flex-end;margin-top:-5px"><button class="btn small" data-edit="${a.id}">Edit</button><button class="btn danger small" data-delete="${a.id}">Hapus</button></div>`).join('')||'<div class="empty">Belum ada aktivitas.</div>'}</div></section></div>`;
- root.querySelectorAll('[data-month]').forEach(b=>b.addEventListener('click',()=>{shownMonth=new Date(shownMonth.getFullYear(),shownMonth.getMonth()+Number(b.dataset.month),1);renderCalendarPage();}));root.querySelectorAll('[data-date]').forEach(b=>b.addEventListener('click',()=>{selectedDate=b.dataset.date;renderCalendarPage();}));root.querySelector('#todayBtn').onclick=()=>{selectedDate=iso(today);shownMonth=new Date(today.getFullYear(),today.getMonth(),1);renderCalendarPage();};root.querySelector('#setTomorrowStatus').onclick=()=>{const tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);openWorkdayStatusModal(iso(tomorrow));};root.querySelector('[data-open-activity]').onclick=()=>openActivityModal();root.querySelector('#setWorkdayStatus').onclick=()=>openWorkdayStatusModal(selectedDate);renderWorkdayStatusInfo(root,selectedDate);bindActivityActions(root);
-}
+function renderCalendarPage(){const root=$('#pageContent');if(!root)return;const localActivities=activities.filter(a=>a.date===selectedDate).sort((a,b)=>(a.time||'').localeCompare(b.time||''));const googleEvents=creativeEventsForDate(selectedDate).sort((a,b)=>(a.start||'').localeCompare(b.start||''));const googleStatus=creativeCalendarState==='loading'?'<div class="empty">Mengambil event Kreatif Desain dari Google Calendar…</div>':creativeCalendarState==='error'?`<div class="empty">Event Google Calendar belum dapat dimuat. ${escapeHtml(creativeCalendarError)} <button class="btn small" id="retryCreativeCalendar">Coba lagi</button></div>`:googleEvents.map(creativeEventRow).join('')||'<div class="empty">Tidak ada event Kreatif Desain pada tanggal ini.</div>';root.innerHTML=`<div class="grid two-col"><section class="panel"><div class="panel-head"><div><h2>Activity Calendar</h2><p>Titik merah = aktivitas manual. Titik ungu = event Kreatif Desain.</p></div><button class="btn small" id="todayBtn">Today</button><button class="btn primary small" id="setTomorrowStatus">Jadwal Besok</button></div><div id="fullCalendar">${calendarMarkup(shownMonth)}</div><div class="footnote">Event Google Calendar hanya ditampilkan sebagai referensi dan tidak dapat diedit dari website.</div></section><section class="panel"><div class="panel-head"><div><h2 id="selectedDateTitle">${fmtDate(selectedDate,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</h2><p>Aktivitas dan event pada tanggal yang dipilih</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="setWorkdayStatus">Workday Status</button><button class="btn primary small" data-open-activity>＋ Tambah</button></div></div><div id="workdayStatusInfo"></div><div class="activity-list">${localActivities.map(a=>activityRow(a)+`<div class="row-actions" style="justify-content:flex-end;margin-top:-5px"><button class="btn small" data-edit="${a.id}">Edit</button><button class="btn danger small" data-delete="${a.id}">Hapus</button></div>`).join('')||'<div class="empty">Belum ada aktivitas manual.</div>'}</div><div class="creative-calendar-section"><div class="creative-calendar-heading"><h3>Event Kreatif Desain</h3><span class="tag purple">Google Calendar</span></div><div class="activity-list" id="creativeCalendarEvents">${googleStatus}</div></div></section></div>`;root.querySelectorAll('[data-month]').forEach(b=>b.addEventListener('click',()=>{shownMonth=new Date(shownMonth.getFullYear(),shownMonth.getMonth()+Number(b.dataset.month),1);renderCalendarPage();}));root.querySelectorAll('[data-date]').forEach(b=>b.addEventListener('click',()=>{selectedDate=b.dataset.date;renderCalendarPage();}));root.querySelector('#todayBtn').onclick=()=>{selectedDate=iso(today);shownMonth=new Date(today.getFullYear(),today.getMonth(),1);renderCalendarPage();};root.querySelector('#setTomorrowStatus').onclick=()=>{const tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);openWorkdayStatusModal(iso(tomorrow));};root.querySelector('[data-open-activity]').onclick=()=>openActivityModal();root.querySelector('#setWorkdayStatus').onclick=()=>openWorkdayStatusModal(selectedDate);const retry=root.querySelector('#retryCreativeCalendar');if(retry)retry.onclick=()=>{creativeCalendarRequestStarted=false;loadCreativeCalendarEvents(true);};renderWorkdayStatusInfo(root,selectedDate);bindActivityActions(root);}
+
 function renderWorkdayStatusInfo(root,date){const box=root.querySelector('#workdayStatusInfo');if(!box)return;const item=workdayStatuses.find(x=>x.date===date);if(!item){box.innerHTML='';return;}box.innerHTML=`<div class="workday-status-card workday-card-${String(item.type).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}"><strong>${escapeHtml(item.type)}</strong>${item.sourceDate?`<div class="muted">Hari kerja pengganti dari: ${fmtDate(item.sourceDate,{day:'numeric',month:'long',year:'numeric'})}</div>`:''}${item.note?`<div class="muted">${escapeHtml(item.note)}</div>`:''}<button class="btn small" id="removeWorkdayStatus">Hapus status</button></div>`;box.querySelector('#removeWorkdayStatus').onclick=()=>{workdayStatuses=workdayStatuses.filter(x=>x.date!==date);save();renderPage();toast('Status hari kerja dihapus.');};}
 function openWorkdayStatusModal(date){let modal=$('#workdayStatusModal');if(!modal){modal=document.createElement('div');modal.id='workdayStatusModal';modal.className='modal-backdrop';modal.innerHTML=`<div class="modal"><div class="modal-title"><h2>Workday Status</h2><button class="icon-btn" data-close-workday>×</button></div><form id="workdayStatusForm"><div class="form-grid"><div class="field full"><label>Tanggal *</label><input name="date" type="date" required></div><div class="field full"><label>Status hari *</label><select name="type"><option>Working Day</option><option>Day Off</option><option>Day Payment</option><option>Public Holiday</option><option>Sick Leave</option><option>Annual Leave</option></select></div><div class="field full" id="sourceDateField"><label>Tanggal masuk kerja asal (untuk Day Payment)</label><input name="sourceDate" type="date"><small class="muted">Tanggal saat kamu masuk kerja dan mendapatkan hari pengganti.</small></div><div class="field full"><label>Catatan / alasan</label><textarea name="note" placeholder="Contoh: Pengganti masuk saat event hari Minggu"></textarea></div></div><div class="form-actions"><button type="button" class="btn" data-close-workday>Batal</button><button class="btn primary" type="submit">Simpan Status</button></div></form></div>`;document.body.append(modal);modal.querySelectorAll('[data-close-workday]').forEach(b=>b.onclick=()=>modal.classList.remove('open'));modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open');};const form=modal.querySelector('#workdayStatusForm');form.elements.type.onchange=()=>{modal.querySelector('#sourceDateField').style.display=form.elements.type.value==='Day Payment'?'':'none';};form.onsubmit=e=>{e.preventDefault();const obj={date:form.elements.date.value,type:form.elements.type.value,sourceDate:form.elements.type.value==='Day Payment'?form.elements.sourceDate.value:'',note:form.elements.note.value.trim()};if(obj.type==='Day Payment'&&!obj.sourceDate){toast('Isi tanggal masuk kerja asal untuk Day Payment.');return;}workdayStatuses=workdayStatuses.filter(x=>x.date!==obj.date);workdayStatuses.push(obj);try{save();modal.classList.remove('open');selectedDate=obj.date;shownMonth=new Date(obj.date+'T12:00:00');renderPage();toast('Status hari kerja disimpan.');}catch(err){toast('Status gagal disimpan.');}};}const existing=workdayStatuses.find(x=>x.date===date);modal.querySelector('#workdayStatusForm').elements.date.value=date;modal.querySelector('#workdayStatusForm').elements.type.value=existing?.type||'Working Day';modal.querySelector('#workdayStatusForm').elements.sourceDate.value=existing?.sourceDate||'';modal.querySelector('#workdayStatusForm').elements.note.value=existing?.note||'';modal.querySelector('#sourceDateField').style.display=modal.querySelector('#workdayStatusForm').elements.type.value==='Day Payment'?'':'none';modal.classList.add('open');}
 function bindActivityActions(root=document){root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openActivityModal(b.dataset.edit));root.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{if(confirm('Hapus aktivitas ini?')){activities=activities.filter(a=>a.id!==b.dataset.delete);save();renderPage();toast('Aktivitas dihapus.');}});}
@@ -312,7 +381,7 @@ function initNotificationDropdown(){
 function renderPage(){shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
 try{const savedTheme=localStorage.getItem(KEYS.theme);if(savedTheme==='dark'||savedTheme==='light'){document.documentElement.dataset.theme=savedTheme;document.body.dataset.theme=savedTheme;}}catch{}
-document.addEventListener('DOMContentLoaded',renderPage);
+document.addEventListener('DOMContentLoaded',()=>{renderPage();loadCreativeCalendarEvents();});
 document.addEventListener('paste',handleScreenshotPaste);
 window.addEventListener('resize',()=>{if(document.body.dataset.page==='analytics')renderAnalytics();});
 })();
