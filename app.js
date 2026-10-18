@@ -37,27 +37,24 @@ const monthName = d => new Intl.DateTimeFormat('id-ID',{month:'long',year:'numer
 const CREATIVE_CALENDAR_API = 'https://script.google.com/macros/s/AKfycbzjaCBVIeq4Bagj3MaqGULyrWF2LtzaZdEtVusmVFwiuwnpGJbk74fxSxuj34kuMT9t/exec';
 const REMINDER_SYNC_API = CREATIVE_CALENDAR_API;
 
-// Kirim HANYA reminder baru ke Google Calendar Daily Reports.
+// Sinkronkan reminder baru maupun hasil edit ke Google Calendar Daily Reports.
 // Menggunakan text/plain + no-cors agar tidak memicu preflight CORS pada Apps Script.
-function syncNewReminderToGoogleCalendar(reminder) {
-  if (!reminder || !reminder.id || !reminder.title || !reminder.date) return;
-  const payload = {
-    action: 'createReminder',
-    id: String(reminder.id),
-    title: String(reminder.title),
-    date: String(reminder.date),
-    time: String(reminder.time || ''),
-    priority: String(reminder.priority || 'Medium'),
+function syncNewReminderToGoogleCalendar(reminder, action = 'upsertReminder') {
+  if (!reminder || !reminder.id) return;
+  if (action !== 'deleteReminder' && (!reminder.title || !reminder.date)) return;
+  const payload = { action, id: String(reminder.id) };
+  if (action !== 'deleteReminder') Object.assign(payload, {
+    title: String(reminder.title), date: String(reminder.date),
+    time: String(reminder.time || ''), priority: String(reminder.priority || 'Medium'),
     notes: String(reminder.notes || '')
-  };
+  });
   fetch(REMINDER_SYNC_API, {
-    method: 'POST',
-    mode: 'no-cors',
+    method: 'POST', mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
   }).catch(error => {
-    console.error('Gagal mengirim reminder ke Google Calendar:', error);
-    toast('Reminder tersimpan di website, tetapi pengiriman ke Google Calendar gagal.');
+    console.error('Gagal menyinkronkan reminder ke Google Calendar:', error);
+    toast('Reminder tersimpan di website, tetapi sinkronisasi Google Calendar gagal.');
   });
 }
 let creativeCalendarEvents = [];
@@ -179,7 +176,7 @@ function renderDashboard(){const root=$('#pageContent');if(!root)return;root.inn
  root.querySelector('#saveNotes')?.addEventListener('click',()=>{notes={win:$('#noteWin').value,challenge:$('#noteChallenge').value,focus:$('#noteFocus').value};save();toast('Notes berhasil disimpan.');});
  bindReminderToggles(root);
 }
-function bindReminderToggles(root=document){root.querySelectorAll('[data-reminder-toggle]').forEach(b=>b.addEventListener('click',()=>{const r=reminders.find(x=>x.id===b.dataset.reminderToggle);if(r){r.done=!r.done;save();renderPage();toast('Reminder diperbarui.');}}));}
+function bindReminderToggles(root=document){root.querySelectorAll('[data-reminder-toggle]').forEach(b=>b.addEventListener('click',()=>{const r=reminders.find(x=>x.id===b.dataset.reminderToggle);if(r){r.done=!r.done;save();syncNewReminderToGoogleCalendar(r,r.done?'deleteReminder':'upsertReminder');renderPage();toast(r.done?'Reminder selesai; event Google Calendar dihapus.':'Reminder diaktifkan kembali; event Google Calendar dibuat.');}}));}
 function openActivityModal(id=null){editingId=id;const old=activities.find(a=>a.id===id)||{date:selectedDate,time:'09:00',name:'',description:'',output:'',status:'On Progress',priority:'Medium',unit:units[0]||'Personal / Other',notes:'',photos:[]};let modal=$('#activityModal');if(!modal){modal=document.createElement('div');modal.id='activityModal';modal.className='modal-backdrop';modal.innerHTML=`<div class="modal"><div class="modal-title"><h2 id="activityModalTitle">Add Activity</h2><button class="icon-btn" data-close-modal>×</button></div><form id="activityForm"><div class="form-grid"><div class="field"><label>Date *</label><input name="date" type="date" required></div><div class="field"><label>Time</label><input name="time" type="time"></div><div class="field full"><label>Activity Name *</label><input name="name" required placeholder="Contoh: Update website"></div><div class="field"><label>Business Unit</label><select name="unit"></select></div><div class="field"><label>Status</label><select name="status"><option>On Progress</option><option>Done</option><option>Pending</option></select></div><div class="field"><label>Priority</label><select name="priority"><option>Low</option><option>Medium</option><option>High</option></select></div><div class="field"><label>Output / Result</label><input name="output" placeholder="Hasil pekerjaan"></div><div class="field full"><label>Activity Description</label><textarea name="description" placeholder="Detail pekerjaan..."></textarea></div><div class="field full"><label>Notes</label><textarea name="notes" placeholder="Notes tambahan..."></textarea></div><div class="field full"><label>Dokumentasi foto</label><input name="photos" type="file" accept="image/*" multiple><div class="paste-photo-hint" tabindex="0">📋 <strong>Paste screenshot di sini</strong><br><small class="muted">Tekan Ctrl + V setelah mengambil screenshot, atau gunakan Upload Photo.</small><div id="existingPhotos" class="bar-legend"></div></div></div></div><div class="form-actions"><button type="button" class="btn" data-close-modal>Batal</button><button class="btn primary" type="submit">Simpan Aktivitas</button></div></form></div>`;document.body.append(modal);modal.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>modal.classList.remove('open')));modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});modal.querySelector('#activityForm').addEventListener('submit',saveActivityForm);}
  const form=$('#activityForm',modal);form.reset();$('#activityModalTitle',modal).textContent=id?'Edit Activity':'Add Activity';form.elements.date.value=old.date;form.elements.time.value=old.time;form.elements.name.value=old.name;form.elements.description.value=old.description;form.elements.output.value=old.output;form.elements.status.value=old.status;form.elements.priority.value=old.priority;form.elements.notes.value=old.notes;form.elements.unit.innerHTML=units.map(u=>`<option ${u===old.unit?'selected':''}>${escapeHtml(u)}</option>`).join('');$('#existingPhotos',modal).innerHTML=(old.photos||[]).map(src=>`<img src="${src}" class="photo-thumb">`).join('');modal.classList.add('open');
 }
@@ -257,14 +254,14 @@ function renderReminders(){
  $('#addReminder').onclick=()=>{close();modal.classList.add('open');};
  $('#closeReminder').onclick=$('#cancelReminder').onclick=close;
  form.onsubmit=e=>{e.preventDefault();const f=e.currentTarget;const values={title:f.elements.title.value.trim(),date:f.elements.date.value,time:f.elements.time.value,priority:f.elements.priority.value,notes:f.elements.notes.value};
-  if(editingReminderId){const existing=reminders.find(r=>r.id===editingReminderId);if(existing){Object.assign(existing,values);save();close();draw();toast('Perubahan reminder disimpan.');}}
+  if(editingReminderId){const existing=reminders.find(r=>r.id===editingReminderId);if(existing){Object.assign(existing,values);try{save();}catch(err){toast('Perubahan reminder gagal disimpan di browser.');return;}syncNewReminderToGoogleCalendar(existing,existing.done?'deleteReminder':'upsertReminder');close();draw();toast('Perubahan tersimpan dan sinkronisasi Google Calendar dimulai.');}}
   else{const newReminder={id:crypto.randomUUID(),...values,done:false};reminders.push(newReminder);try{save();}catch(err){reminders=reminders.filter(r=>r.id!==newReminder.id);toast('Reminder gagal disimpan di browser.');return;}syncNewReminderToGoogleCalendar(newReminder);close();draw();toast('Reminder ditambahkan. Pengiriman ke Google Calendar dimulai.');}
  };
  const draw=()=>{const mode=$('#reminderFilter').value,q=$('#reminderSearch').value.toLowerCase();const arr=reminders.filter(r=>(mode==='all'||(mode==='done'?r.done:!r.done))&&r.title.toLowerCase().includes(q)).sort((a,b)=>a.date.localeCompare(b.date));
   $('#reminderRows').innerHTML=arr.map(r=>`<div class="panel"><div class="panel-head"><span class="tag ${r.done?'done':r.priority==='High'?'pending':r.priority==='Medium'?'progress':'blue'}">${r.done?'Selesai':escapeHtml(r.priority)}</span><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="btn small" data-reminder-edit="${r.id}">Edit</button><button class="btn danger small" data-reminder-delete="${r.id}">Hapus</button></div></div><h3 style="font-size:13px;margin:0 0 5px">${escapeHtml(r.title)}</h3><p class="muted" style="font-size:11px;margin:0 0 12px">${fmtDate(r.date,{weekday:'short',day:'numeric',month:'short',year:'numeric'})} ${r.time?'· '+escapeHtml(r.time):''}</p>${r.notes?`<p style="font-size:11px">${escapeHtml(r.notes)}</p>`:''}<button class="btn small ${r.done?'':'soft'}" data-reminder-toggle="${r.id}">${r.done?'Tandai aktif':'Tandai selesai'}</button></div>`).join('')||'<div class="empty">Tidak ada reminder.</div>';
   bindReminderToggles(root);
   root.querySelectorAll('[data-reminder-edit]').forEach(b=>b.onclick=()=>{const r=reminders.find(x=>x.id===b.dataset.reminderEdit);if(!r)return;editingReminderId=r.id;form.elements.title.value=r.title||'';form.elements.date.value=r.date||iso(today);form.elements.time.value=r.time||'';form.elements.priority.value=r.priority||'Medium';form.elements.notes.value=r.notes||'';$('#reminderModalTitle').textContent='Edit Reminder';$('#saveReminderButton').textContent='Simpan Perubahan';modal.classList.add('open');});
-  root.querySelectorAll('[data-reminder-delete]').forEach(b=>b.onclick=()=>{if(confirm('Hapus reminder?')){reminders=reminders.filter(r=>r.id!==b.dataset.reminderDelete);save();draw();}});
+  root.querySelectorAll('[data-reminder-delete]').forEach(b=>b.onclick=()=>{if(confirm('Hapus reminder? Event terkait di Google Calendar juga akan dihapus.')){const target=reminders.find(r=>r.id===b.dataset.reminderDelete);if(target)syncNewReminderToGoogleCalendar(target,'deleteReminder');reminders=reminders.filter(r=>r.id!==b.dataset.reminderDelete);save();draw();toast('Reminder dihapus. Penghapusan event Google Calendar dimulai.');}});
  };
  $('#reminderFilter').onchange=draw;$('#reminderSearch').oninput=draw;draw();
 }
