@@ -26,6 +26,33 @@ const ICONS = {
 const icon = (name, cls='') => `<span class="svg-icon ${cls}">${ICONS[name]||''}</span>`;
 
 const KEYS = {activities:'dailyflow_activities_v1', reminders:'dailyflow_reminders_v1', notes:'dailyflow_notes_v1', units:'dailyflow_units_v1', theme:'dailyflow_theme_v1', profile:'dailyflow_profile_v1', unitBranding:'dailyflow_unit_branding_v1', workdays:'dailyflow_workday_status_v1'};
+
+// Sinkronkan favicon tab browser dengan foto profil yang tersimpan di Settings.
+function syncProfileFavicon() {
+  try {
+    const savedProfile = JSON.parse(localStorage.getItem(KEYS.profile) || '{}');
+    if (!savedProfile.photo) return; // Pertahankan favicon default jika belum ada foto.
+
+    let favicon = document.querySelector('link[rel~="icon"]');
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+
+    favicon.href = savedProfile.photo;
+    if (savedProfile.photo.startsWith('data:image/webp')) favicon.type = 'image/webp';
+    else if (savedProfile.photo.startsWith('data:image/png')) favicon.type = 'image/png';
+    else if (savedProfile.photo.startsWith('data:image/svg+xml')) favicon.type = 'image/svg+xml';
+    else if (savedProfile.photo.startsWith('data:image/gif')) favicon.type = 'image/gif';
+    else favicon.type = 'image/jpeg';
+  } catch (error) {
+    console.warn('Favicon foto profil tidak dapat diperbarui.', error);
+  }
+}
+
+syncProfileFavicon();
+
 const defaultUnits = ['Bukit Darmo Golf','Fairway Nine Mall','9 Boulevard','Hyatt Centric','Goshen Power','Goshen 3D','Personal / Other'];
 const today = new Date(); today.setHours(0,0,0,0);
 const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -326,8 +353,8 @@ function renderSettings(){
  <section class="panel"><div class="panel-head"><div><h2>Data Management</h2><p>Cadangkan atau pindahkan data Daily Reports.</p></div></div><div class="settings-row"><div><strong>Export JSON Backup</strong><p>Unduh aktivitas, pengingat, catatan, unit bisnis, profil, dan logo.</p></div><button class="btn primary" id="exportBackup">Export JSON</button></div><div class="settings-row"><div><strong>Import JSON Backup</strong><p>Pulihkan data dari cadangan Daily Reports.</p></div><label class="btn" for="backupFile">Choose File<input id="backupFile" class="file-input" type="file" accept=".json"></label></div><div class="settings-row"><div><strong>Delete All Local Data</strong><p>Tindakan ini tidak dapat dibatalkan.</p></div><button class="btn danger" id="clearData">Hapus Data</button></div><p class="footnote">Penyimpanan lokal browser aktif. Database cloud belum tersambung secara otomatis.</p></section></div>`;
  $('#settingsTheme').onclick=()=>{applyTheme(document.body.dataset.theme==='dark'?'light':'dark');renderSettings();};
  $('#profilePhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!f.type.startsWith('image/')){toast('Pilih file gambar.');return;}profile.photo=await fileToDataURL(f);$('#profilePreview').outerHTML=`<img id="profilePreview" src="${profile.photo}" alt="Foto profil">`;};
- $('#removeProfilePhoto')?.addEventListener('click',()=>{profile.photo='';save();shell();renderSettings();toast('Foto profil berhasil dihapus.');});
- $('#saveProfile').onclick=()=>{profile.name=$('#settingName').value.trim()||'Nama Pengguna';profile.role=$('#settingRole').value.trim();profile.department=$('#settingDepartment').value.trim();profile.company=$('#settingCompany').value.trim();save();shell();renderSettings();toast('Profil berhasil disimpan.');};
+ $('#removeProfilePhoto')?.addEventListener('click',()=>{profile.photo='';save();syncProfileFavicon();shell();renderSettings();toast('Foto profil berhasil dihapus.');});
+ $('#saveProfile').onclick=()=>{profile.name=$('#settingName').value.trim()||'Nama Pengguna';profile.role=$('#settingRole').value.trim();profile.department=$('#settingDepartment').value.trim();profile.company=$('#settingCompany').value.trim();save();syncProfileFavicon();shell();renderSettings();toast('Profil berhasil disimpan.');};
  $('#addUnit').onclick=()=>{const u=prompt('Nama unit bisnis baru:');if(u&&u.trim()&&!units.includes(u.trim())){units.push(u.trim());save();renderSettings();toast('Business unit ditambahkan.');}};
  root.querySelectorAll('[data-unit-logo]').forEach(inp=>inp.onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
@@ -407,31 +434,3 @@ document.addEventListener('DOMContentLoaded',()=>{renderPage();loadCreativeCalen
 document.addEventListener('paste',handleScreenshotPaste);
 window.addEventListener('resize',()=>{if(document.body.dataset.page==='analytics')renderAnalytics();});
 })();
-
-```javascript
-// Sync browser tab favicon with the uploaded profile photo.
-(function syncProfileFavicon() {
-  try {
-    const profile = JSON.parse(
-      localStorage.getItem('dailyflow_profile_v1') || '{}'
-    );
-
-    if (!profile.photo) return;
-
-    let favicon = document.querySelector('link[rel="icon"]');
-
-    if (!favicon) {
-      favicon = document.createElement('link');
-      favicon.rel = 'icon';
-      document.head.appendChild(favicon);
-    }
-
-    favicon.href = profile.photo;
-    favicon.type = profile.photo.startsWith('data:image/png')
-      ? 'image/png'
-      : 'image/jpeg';
-  } catch (error) {
-    console.warn('Favicon foto profil tidak dapat diperbarui.', error);
-  }
-})();
-```
