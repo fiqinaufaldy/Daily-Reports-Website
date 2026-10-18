@@ -392,8 +392,16 @@ body[data-theme="dark"] .day.has-workday-status{box-shadow:inset 0 0 0 1px #739a
   margin: auto !important;
 }
 
+
 .photo-lightbox-close {
   z-index: 100000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
 }
 
 @media (max-width: 600px) {
