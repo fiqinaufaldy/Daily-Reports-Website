@@ -354,3 +354,56 @@ body[data-theme="dark"] .day.has-workday-status{box-shadow:inset 0 0 0 1px #739a
 /* Profile photo change/remove actions */
 .profile-photo-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;align-items:center}.profile-photo-actions .btn{cursor:pointer}
 @media(max-width:760px){.profile-photo-actions{justify-content:flex-start}}
+
+
+/* FIX: Make documentation lightbox image larger */
+.photo-lightbox {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  padding: 64px 24px 24px !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.photo-lightbox.open {
+  display: flex !important;
+}
+
+.photo-lightbox-stage {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.photo-lightbox-stage img,
+.photo-lightbox > img {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 94vw !important;
+  max-height: 82vh !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  margin: auto !important;
+}
+
+.photo-lightbox-close {
+  z-index: 100000 !important;
+}
+
+@media (max-width: 600px) {
+  .photo-lightbox {
+    padding: 60px 10px 16px !important;
+  }
+
+  .photo-lightbox-stage img,
+  .photo-lightbox > img {
+    max-width: 96vw !important;
+    max-height: 84vh !important;
+  }
+}
