@@ -478,45 +478,47 @@ function renderSettings(){
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
 
 function initNotificationDropdown(){
- // Reuse the existing header bell when present. On pages without one, add exactly one beside the theme button.
- let toggle=$('#notificationToggle'), pop=$('#notificationPopover'), list=$('#notificationList');
- const themeButton=$('#themeToggle');
- if(!toggle){
-  const host=themeButton?.parentElement || $('.topbar-actions') || $('.header-actions') || $('.topbar') || $('header');
-  if(!host)return;
-  const wrap=document.createElement('div');wrap.className='notification-wrap';wrap.style.cssText='position:relative;display:inline-flex;align-items:center;';
-  toggle=document.createElement('button');toggle.type='button';toggle.id='notificationToggle';toggle.className=themeButton?.className||'icon-btn';toggle.setAttribute('aria-label','Notifikasi');toggle.setAttribute('aria-expanded','false');toggle.title='Notifikasi';
-  toggle.innerHTML=icon('notification');
-  if(themeButton&&themeButton.parentElement===host){host.insertBefore(wrap,themeButton);}else{host.appendChild(wrap);}
-  wrap.appendChild(toggle);
- }else{
-  let wrap=toggle.closest('.notification-wrap');
-  if(!wrap){wrap=document.createElement('div');wrap.className='notification-wrap';wrap.style.cssText='position:relative;display:inline-flex;align-items:center;';toggle.parentNode.insertBefore(wrap,toggle);wrap.appendChild(toggle);}
- }
- let wrap=toggle.closest('.notification-wrap')||toggle.parentElement;
- if(!pop){pop=document.createElement('div');pop.id='notificationPopover';pop.hidden=true;pop.className='notification-popover';pop.style.cssText='position:absolute;right:0;top:calc(100% + 10px);width:min(390px,calc(100vw - 32px));max-height:min(65vh,480px);overflow:auto;z-index:9999;background:var(--panel,#1b2720);border:1px solid var(--border,#34443a);border-radius:18px;box-shadow:0 16px 40px rgba(0,0,0,.28);';wrap.appendChild(pop);}
- if(!list){list=document.createElement('div');list.id='notificationList';list.className='notification-list';pop.appendChild(list);}
- if(!toggle.querySelector('.notification-count')){const badge=document.createElement('span');badge.className='notification-count';badge.style.cssText='position:absolute;right:-4px;top:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#e5484d;color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;';toggle.style.position='relative';toggle.appendChild(badge);}
- const iconFor=(kind)=>kind==='insight'
+ const toggle=$('#notificationToggle'), pop=$('#notificationPopover'), list=$('#notificationList');
+ if(!toggle||!pop||!list)return;
+ const READ_KEY='dailyflow_notifications_read_v1';
+ const icon=(kind)=>kind==='insight'
   ? '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>'
   : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l5-3 5 4 6-3v12l-6 3-5-4-5 3z"/><path d="M9 4v12M14 8v12"/></svg>';
  const relTime=(date)=>{if(!date)return 'Hari ini';const d=new Date(date+'T00:00:00'),days=Math.max(0,Math.floor((new Date()-d)/86400000));return days===0?'Hari ini':days+' hari lalu';};
- function getItems(){
-  const result=[];const todayActivities=activities.filter(a=>a.date===iso(today));
-  const status=workdayStatuses.find(x=>x.date===iso(today));const nonWorking=status&&['Cuti','Day Payment','Sakit','Izin','Day Off','Public Holiday','Sick Leave','Annual Leave'].includes(status.type);
-  if(todayActivities.length===0&&!nonWorking)result.push({kind:'insight',title:'Activity Not Recorded',desc:'Kamu belum mengisi data aktivitas hari ini. Yuk, catat aktivitasmu agar Daily Reports tetap lengkap.',time:'Hari ini',href:'daily-report.html'});
-  reminders.filter(r=>!r.done&&r.date&&r.date<iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>result.push({kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.date}.`,time:relTime(r.date),href:'reminder.html'}));
-  reminders.filter(r=>!r.done&&r.date&&r.date>=iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3).forEach(r=>result.push({kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}.`,time:relTime(r.date),href:'reminder.html'}));
-  return result;
+ const readIds=()=>{try{return JSON.parse(localStorage.getItem(READ_KEY)||'[]')}catch{return []}};
+ const saveReadIds=(ids)=>{try{localStorage.setItem(READ_KEY,JSON.stringify([...new Set(ids)]))}catch{}};
+ const getItems=()=>{
+  const items=[];
+  const todayActivities=activities.filter(a=>a.date===iso(today));
+  const todayWorkdayStatus=workdayStatuses.find(x=>x.date===iso(today));
+  const nonWorkingDay=todayWorkdayStatus&&['Cuti','Day Payment','Sakit','Izin'].includes(todayWorkdayStatus.type);
+  if(todayActivities.length===0&&!nonWorkingDay)items.push({id:'activity-not-recorded-'+iso(today),kind:'insight',title:'Activity Not Recorded',desc:'Kamu belum mengisi data aktivitas hari ini. Yuk, catat aktivitasmu agar Daily Reports tetap lengkap.',time:'Hari ini',href:'daily-report.html'});
+  const overdue=reminders.filter(r=>!r.done&&r.date&&r.date<iso(today)).sort((a,b)=>a.date.localeCompare(b.date));
+  overdue.forEach(r=>items.push({id:'overdue-'+r.id,kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.date}.`,time:relTime(r.date),href:'reminder.html'}));
+  const upcoming=reminders.filter(r=>!r.done&&r.date&&r.date>=iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+  upcoming.forEach(r=>items.push({id:'upcoming-'+r.id,kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}.`,time:relTime(r.date),href:'reminder.html'}));
+  return items;
+ };
+ let badge=toggle.querySelector('.notification-badge, .notification-count, [data-notification-count]');
+ if(!badge){badge=document.createElement('span');badge.className='notification-badge';badge.setAttribute('data-notification-count','');badge.style.cssText='position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 4px;border-radius:999px;background:#e5484d;color:white;font-size:12px;font-weight:700;line-height:19px;text-align:center;display:none;';if(getComputedStyle(toggle).position==='static')toggle.style.position='relative';toggle.appendChild(badge);}
+ if(!pop.querySelector('[data-mark-all-read]')){
+  const mark=document.createElement('button');mark.type='button';mark.textContent='Tandai semua sudah dibaca';mark.setAttribute('data-mark-all-read','');mark.style.cssText='display:block;width:100%;padding:10px 14px;border:0;border-bottom:1px solid var(--border, #33443a);background:transparent;color:var(--text, inherit);text-align:right;font:inherit;font-size:12px;cursor:pointer;';
+  pop.insertBefore(mark,list);
  }
  function renderItems(){
-  const items=getItems();list.innerHTML=items.map((n,i)=>`<a class="notification-item" href="${n.href||'reminder.html'}" data-notification-item data-notification-index="${i}" style="display:flex;gap:14px;padding:16px 18px;color:inherit;text-decoration:none;border-bottom:1px solid var(--border,#34443a);cursor:pointer"><span class="notification-item-icon" style="flex:0 0 24px">${iconFor(n.kind)}</span><span style="min-width:0"><div class="notification-item-title" style="font-weight:700;margin-bottom:5px">${escapeHtml(n.title)}</div><div class="notification-item-desc">${escapeHtml(n.desc)}</div><div class="notification-item-time" style="margin-top:7px;font-size:12px;opacity:.75">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty" style="padding:20px">Belum ada notifikasi.</div>';
-  const badge=toggle.querySelector('.notification-count');if(badge){const count=items.length;badge.textContent=count>9?'9+':String(count);badge.style.display=count?'inline-flex':'none';}
+  const items=getItems(),read=readIds();
+  const unread=items.filter(n=>!read.includes(n.id));
+  badge.textContent=String(unread.length);badge.style.display=unread.length?'inline-block':'none';badge.setAttribute('aria-label',unread.length+' notifikasi belum dibaca');
+  list.innerHTML=items.map(n=>`<a class="notification-item${read.includes(n.id)?' is-read':''}" href="${n.href||'reminder.html'}" data-notification-item="${escapeHtml(n.id)}" style="${read.includes(n.id)?'opacity:.65;':''}"><span class="notification-item-icon">${icon(n.kind)}</span><span><div class="notification-item-title">${escapeHtml(n.title)}</div><div class="notification-item-desc">${escapeHtml(n.desc)}</div><div class="notification-item-time">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty">Belum ada notifikasi.</div>';
+  const mark=pop.querySelector('[data-mark-all-read]');if(mark){mark.disabled=unread.length===0;mark.style.opacity=unread.length?'1':'.5';}
  }
- renderItems();toggle.setAttribute('aria-expanded','false');
- toggle.onclick=(e)=>{e.preventDefault();e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();};
- list.onclick=(e)=>{const item=e.target.closest('[data-notification-item]');if(!item)return;const items=getItems(),n=items[Number(item.dataset.notificationIndex)];if(n?.href){e.preventDefault();window.location.href=n.href;}};
- if(!window.__dailyFlowNotificationOutside){window.__dailyFlowNotificationOutside=true;document.addEventListener('click',e=>{const t=$('#notificationToggle'),p=$('#notificationPopover');if(t&&p&&!p.contains(e.target)&&!t.contains(e.target)){p.hidden=true;t.setAttribute('aria-expanded','false');}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const t=$('#notificationToggle'),p=$('#notificationPopover');if(t&&p){p.hidden=true;t.setAttribute('aria-expanded','false');}}});}
+ toggle.setAttribute('aria-expanded',String(!pop.hidden));
+ toggle.onclick=(e)=>{e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();};
+ pop.querySelector('[data-mark-all-read]').onclick=(e)=>{e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),...getItems().map(n=>n.id)]);renderItems();};
+ list.onclick=(e)=>{const item=e.target.closest('[data-notification-item]');if(!item)return;const id=item.getAttribute('data-notification-item');saveReadIds([...readIds(),id]);renderItems();};
+ renderItems();
+ document.addEventListener('click',e=>{if(!pop.contains(e.target)&&!toggle.contains(e.target)){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
 }
 function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
