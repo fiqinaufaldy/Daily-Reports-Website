@@ -25,7 +25,7 @@ const ICONS = {
 };
 const icon = (name, cls='') => `<span class="svg-icon ${cls}">${ICONS[name]||''}</span>`;
 
-const KEYS = {activities:'dailyflow_activities_v1', reminders:'dailyflow_reminders_v1', notes:'dailyflow_notes_v1', units:'dailyflow_units_v1', theme:'dailyflow_theme_v1', profile:'dailyflow_profile_v1', unitBranding:'dailyflow_unit_branding_v1', workdays:'dailyflow_workday_status_v1'};
+const KEYS = {activities:'dailyflow_activities_v1', reminders:'dailyflow_reminders_v1', notes:'dailyflow_notes_v1', units:'dailyflow_units_v1', theme:'dailyflow_theme_v1', profile:'dailyflow_profile_v1', unitBranding:'dailyflow_unit_branding_v1', workdays:'dailyflow_workday_status_v1', calendarColors:'dailyflow_calendar_colors_v1'};
 
 // Sinkronkan favicon tab browser dengan foto profil berbentuk lingkaran.
 function syncProfileFavicon() {
@@ -118,14 +118,17 @@ let creativeCalendarRequestStarted = false;
   const style = document.createElement('style');
   style.id = 'creativeCalendarStyles';
   style.textContent = `
-    .day.has-creative-events{position:relative;box-shadow:inset 0 0 0 1px rgba(139,92,246,.28)}
+    .day.has-items::after{background:var(--calendar-activity-color,#ef4444)!important}
+    .day.has-creative-events{position:relative;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--calendar-creative-color,#8b5cf6) 28%,transparent)}
+    .creative-calendar-dot{background:var(--calendar-creative-color,#8b5cf6)!important}
+    .workday-dot{background:var(--calendar-workday-color,#ec4899)!important}
     .creative-calendar-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#8b5cf6;margin-left:3px;vertical-align:middle}
     .creative-calendar-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border,rgba(128,128,128,.25))}
     .creative-calendar-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
     .creative-calendar-heading h3{margin:0;font-size:1rem}
-    .creative-calendar-event{border:1px solid rgba(139,92,246,.22);border-radius:10px;padding:10px;margin-bottom:8px}
-    .creative-event-mark{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:8px;background:rgba(139,92,246,.12);color:#8b5cf6;font-weight:700}
-    .tag.purple{background:rgba(139,92,246,.12);color:#8b5cf6}
+    .creative-calendar-event{border:1px solid color-mix(in srgb,var(--calendar-creative-color,#8b5cf6) 22%,transparent);border-radius:10px;padding:10px;margin-bottom:8px}
+    .creative-event-mark{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:8px;background:color-mix(in srgb,var(--calendar-creative-color,#8b5cf6) 12%,transparent);color:var(--calendar-creative-color,#8b5cf6);font-weight:700}
+    .tag.purple{background:color-mix(in srgb,var(--calendar-creative-color,#8b5cf6) 12%,transparent);color:var(--calendar-creative-color,#8b5cf6)}
   `;
   document.head.appendChild(style);
 })();
@@ -177,6 +180,30 @@ function creativeEventRow(event) {
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read = (key, fallback=[]) => { try { const v=JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; } };
 const write = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+
+const DEFAULT_CALENDAR_COLORS = {activity:'#ef4444', creative:'#8b5cf6', workday:'#ec4899'};
+function getCalendarColors(){
+  const stored = read(KEYS.calendarColors, {});
+  return {...DEFAULT_CALENDAR_COLORS, ...(stored && typeof stored === 'object' ? stored : {})};
+}
+function applyCalendarColors(){
+  const colors = getCalendarColors();
+  const root = document.documentElement;
+  root.style.setProperty('--calendar-activity-color', colors.activity);
+  root.style.setProperty('--calendar-creative-color', colors.creative);
+  root.style.setProperty('--calendar-workday-color', colors.workday);
+}
+function saveCalendarColors(){
+  const colors = {
+    activity: $('#calendarColorActivity')?.value || DEFAULT_CALENDAR_COLORS.activity,
+    creative: $('#calendarColorCreative')?.value || DEFAULT_CALENDAR_COLORS.creative,
+    workday: $('#calendarColorWorkday')?.value || DEFAULT_CALENDAR_COLORS.workday
+  };
+  write(KEYS.calendarColors, colors);
+  applyCalendarColors();
+  toast('Warna kalender berhasil disimpan.');
+}
+applyCalendarColors();
 let activities = read(KEYS.activities, [
 {id:crypto.randomUUID(),date:iso(today),time:'09:00',name:'Website Development',description:'Revisi Section Footer Home',output:'Footer responsive dan update konten',status:'Done',priority:'Medium',unit:'Bukit Darmo Golf',notes:'Periksa kembali tampilan mobile.',photos:[]},
 {id:crypto.randomUUID(),date:iso(today),time:'10:30',name:'Ratecard Endorsement',description:'Ratecard Endorsement',output:'Ratecard siap dikirim',status:'Done',priority:'High',unit:'Bukit Darmo Golf',notes:'',photos:[]},
@@ -372,9 +399,16 @@ function renderSettings(){
  <div class="profile-editor"><div class="profile-photo-wrap">${profile.photo?`<img id="profilePreview" src="${profile.photo}" alt="Foto profil">`:`<div id="profilePreview" class="profile-placeholder">${initials(profile.name)}</div>`}<div class="profile-photo-actions"><label class="btn small" for="profilePhoto">Ganti foto</label>${profile.photo?`<button type="button" class="btn danger small" id="removeProfilePhoto">Hapus foto</button>`:""}<input id="profilePhoto" class="file-input" type="file" accept="image/*"></div></div>
  <div class="profile-form form-grid"><div class="field"><label for="settingName">Nama lengkap</label><input id="settingName" value="${escapeHtml(profile.name||'')}" placeholder="Nama kamu"></div><div class="field"><label for="settingRole">Jabatan / pekerjaan</label><input id="settingRole" value="${escapeHtml(profile.role||'')}" placeholder="Contoh: Digital Marketing Executive"></div><div class="field"><label for="settingDepartment">Departemen / bidang</label><input id="settingDepartment" value="${escapeHtml(profile.department||'')}" placeholder="Contoh: Marketing"></div><div class="field"><label for="settingCompany">Perusahaan utama</label><input id="settingCompany" value="${escapeHtml(profile.company||'')}" placeholder="Nama perusahaan (opsional)"></div><div class="field full"><button class="btn primary" id="saveProfile">Simpan Profil</button></div></div></div></section>
  <section class="panel"><div class="panel-head"><div><h2>Business Unit & Logo</h2><p>Unggah logo tiap perusahaan/unit agar tampil konsisten.</p></div><button class="btn soft" id="addUnit">＋ Add Unit</button></div><div class="unit-branding-list">${units.map((u,i)=>{const meta=unitBranding[u]||{};return `<article class="unit-branding-card"><div class="unit-logo-preview">${meta.logo?`<img src="${meta.logo}" alt="Logo ${escapeHtml(u)}">`:`<span>${initials(u)}</span>`}</div><div class="unit-branding-fields"><div class="field"><label>Nama unit bisnis</label><input data-unit-name="${i}" value="${escapeHtml(u)}" aria-label="Nama unit bisnis"></div><div class="field"><label>Logo perusahaan</label><label class="btn small logo-upload-label" for="unitLogo${i}">${meta.logo?'Ganti Logo':'＋ Upload Logo'}</label><input id="unitLogo${i}" class="file-input" type="file" accept="image/*" data-unit-logo="${i}"><small class="muted">${meta.logo?'Logo sudah dipilih':'PNG, JPG, SVG yang dirender sebagai gambar'}</small></div></div><div class="unit-card-actions"><button class="btn small" data-unit-save="${i}">Simpan</button><button class="btn danger small" data-unit-delete="${i}">Hapus</button></div></article>`;}).join('')||'<div class="empty">Belum ada business unit.</div>'}</div><div class="settings-row" style="margin-top:14px"><div><strong>Penyimpanan otomatis ke assets/logo</strong><p>Pilih folder proyek satu kali. Logo masuk ke <code>assets/logo/</code> dan dokumentasi pekerjaan ke <code>assets/work/NamaBulan/</code>.</p></div><button class="btn primary" id="chooseLogoFolder">Pilih Folder Proyek</button></div><p class="footnote">Gunakan Chrome/Edge melalui localhost atau HTTPS. Browser meminta izin folder untuk keamanan; logo tetap disimpan di browser sebagai cadangan.</p></section>
- <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Sesuaikan tampilan Daily Reports</p></div></div><div class="settings-row"><div><strong>Tampilan</strong><p>Ganti mode terang atau gelap.</p></div><button class="btn" id="settingsTheme">${icon(document.body.dataset.theme==='dark'?'light':'dark')} ${document.body.dataset.theme==='dark'?'Mode Terang':'Mode Gelap'}</button></div></section>
+ <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Sesuaikan tampilan Daily Reports</p></div></div><div class="settings-row"><div><strong>Tampilan</strong><p>Ganti mode terang atau gelap.</p></div><button class="btn" id="settingsTheme">${icon(document.body.dataset.theme==='dark'?'light':'dark')} ${document.body.dataset.theme==='dark'?'Mode Terang':'Mode Gelap'}</button></div><div style="margin-top:18px"><div style="margin-bottom:12px"><strong>Warna Kalender</strong><p class="muted" style="margin:4px 0 0">Pilih warna titik penanda kalender. Gunakan palet warna untuk memilih warna custom.</p></div><div class="form-grid"><div class="field"><label for="calendarColorActivity">Aktivitas manual</label><div style="display:flex;align-items:center;gap:10px"><input id="calendarColorActivity" type="color" value="${getCalendarColors().activity}" style="width:54px;height:40px;padding:3px"><span class="muted">Titik aktivitas</span></div></div><div class="field"><label for="calendarColorCreative">Google Calendar / Kreatif Desain</label><div style="display:flex;align-items:center;gap:10px"><input id="calendarColorCreative" type="color" value="${getCalendarColors().creative}" style="width:54px;height:40px;padding:3px"><span class="muted">Event eksternal</span></div></div><div class="field"><label for="calendarColorWorkday">Workday Status</label><div style="display:flex;align-items:center;gap:10px"><input id="calendarColorWorkday" type="color" value="${getCalendarColors().workday}" style="width:54px;height:40px;padding:3px"><span class="muted">Status hari kerja</span></div></div></div><div class="form-actions"><button class="btn primary" id="saveCalendarColors">Simpan Warna Kalender</button><button class="btn" id="resetCalendarColors">Reset Default</button></div></div></section>
  <section class="panel"><div class="panel-head"><div><h2>Data Management</h2><p>Cadangkan atau pindahkan data Daily Reports.</p></div></div><div class="settings-row"><div><strong>Export JSON Backup</strong><p>Unduh aktivitas, pengingat, catatan, unit bisnis, profil, dan logo.</p></div><button class="btn primary" id="exportBackup">Export JSON</button></div><div class="settings-row"><div><strong>Import JSON Backup</strong><p>Pulihkan data dari cadangan Daily Reports.</p></div><label class="btn" for="backupFile">Choose File<input id="backupFile" class="file-input" type="file" accept=".json"></label></div><div class="settings-row"><div><strong>Delete All Local Data</strong><p>Tindakan ini tidak dapat dibatalkan.</p></div><button class="btn danger" id="clearData">Hapus Data</button></div><p class="footnote">Penyimpanan lokal browser aktif. Database cloud belum tersambung secara otomatis.</p></section></div>`;
  $('#settingsTheme').onclick=()=>{applyTheme(document.body.dataset.theme==='dark'?'light':'dark');renderSettings();};
+ $('#saveCalendarColors')?.addEventListener('click',saveCalendarColors);
+ $('#resetCalendarColors')?.addEventListener('click',()=>{
+   write(KEYS.calendarColors, DEFAULT_CALENDAR_COLORS);
+   renderSettings();
+   applyCalendarColors();
+   toast('Warna kalender dikembalikan ke default.');
+ });
  $('#profilePhoto').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!f.type.startsWith('image/')){toast('Pilih file gambar.');return;}profile.photo=await fileToDataURL(f);$('#profilePreview').outerHTML=`<img id="profilePreview" src="${profile.photo}" alt="Foto profil">`;};
  $('#removeProfilePhoto')?.addEventListener('click',()=>{profile.photo='';save();syncProfileFavicon();shell();renderSettings();toast('Foto profil berhasil dihapus.');});
  $('#saveProfile').onclick=()=>{profile.name=$('#settingName').value.trim()||'Nama Pengguna';profile.role=$('#settingRole').value.trim();profile.department=$('#settingDepartment').value.trim();profile.company=$('#settingCompany').value.trim();save();syncProfileFavicon();shell();renderSettings();toast('Profil berhasil disimpan.');};
@@ -450,7 +484,7 @@ function initNotificationDropdown(){
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
 }
 
-function renderPage(){shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,settings:renderSettings}[page]||renderDashboard)();}
+function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
 try{const savedTheme=localStorage.getItem(KEYS.theme);if(savedTheme==='dark'||savedTheme==='light'){document.documentElement.dataset.theme=savedTheme;document.body.dataset.theme=savedTheme;}}catch{}
 document.addEventListener('DOMContentLoaded',()=>{renderPage();loadCreativeCalendarEvents();});
