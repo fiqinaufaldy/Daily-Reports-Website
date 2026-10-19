@@ -107,8 +107,18 @@ function syncNewReminderToGoogleCalendar(reminder, action = 'upsertReminder') {
     toast('Reminder tersimpan di website, tetapi sinkronisasi Google Calendar gagal.');
   });
 }
-let creativeCalendarEvents = [];
-let creativeCalendarState = 'loading';
+const CREATIVE_CALENDAR_CACHE_KEY = 'dailyflow_creative_calendar_cache_v1';
+const CREATIVE_CALENDAR_CACHE_TTL = 6 * 60 * 60 * 1000; // cache dianggap segar selama 6 jam
+function readCreativeCalendarCache() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CREATIVE_CALENDAR_CACHE_KEY) || 'null');
+    if (!cached || !Array.isArray(cached.events)) return [];
+    // Tetap tampilkan cache lama supaya penanda muncul langsung; data akan diperbarui di background.
+    return cached.events;
+  } catch (_) { return []; }
+}
+let creativeCalendarEvents = readCreativeCalendarCache();
+let creativeCalendarState = creativeCalendarEvents.length ? 'cached' : 'loading';
 let creativeCalendarError = '';
 let creativeCalendarLoadedAt = null;
 let creativeCalendarRequestStarted = false;
@@ -138,7 +148,7 @@ let creativeCalendarRequestStarted = false;
 function loadCreativeCalendarEvents(force=false) {
   if (creativeCalendarRequestStarted && !force) return;
   creativeCalendarRequestStarted = true;
-  creativeCalendarState = 'loading';
+  if (!creativeCalendarEvents.length) creativeCalendarState = 'loading';
   const callbackName = '__dailyReportsCalendarCallback_' + Date.now() + '_' + Math.random().toString(36).slice(2);
   const script = document.createElement('script');
   let finished = false;
@@ -161,6 +171,15 @@ function loadCreativeCalendarEvents(force=false) {
       creativeCalendarState = 'loaded';
       creativeCalendarError = '';
       creativeCalendarLoadedAt = new Date();
+      // Simpan hasil agar event bisa langsung dirender pada kunjungan berikutnya.
+      try {
+        localStorage.setItem(CREATIVE_CALENDAR_CACHE_KEY, JSON.stringify({
+          savedAt: Date.now(),
+          events: creativeCalendarEvents
+        }));
+      } catch (_) {
+        // Kalender tetap berfungsi meski penyimpanan browser penuh/ditolak.
+      }
     }
     const currentPage = document.body.dataset.page || 'dashboard';
     if (currentPage === 'calendar') {
