@@ -517,6 +517,13 @@ function initNotificationDropdown(){
   return items;
  };
  let pop=document.getElementById('notificationPopover');
+ // Paksa hilangkan header lama jika popover sudah dibuat oleh versi script sebelumnya.
+ if(pop){
+  pop.querySelectorAll('[data-notification-close]').forEach(el=>el.remove());
+  [...pop.children].forEach(child=>{
+   if(child.querySelector('strong')?.textContent.trim().toLowerCase()==='notifikasi')child.remove();
+  });
+ }
  if(!pop){
   pop=document.createElement('section');pop.id='notificationPopover';pop.hidden=true;
   pop.style.cssText='position:absolute;top:calc(100% + 10px);right:0;width:min(390px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--panel,#1c2722);color:var(--text,#f3f5f4);border:1px solid var(--border,#34443b);border-radius:16px;box-shadow:0 16px 42px #0005;padding:0;z-index:10050;';
