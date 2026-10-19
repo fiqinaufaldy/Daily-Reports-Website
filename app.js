@@ -548,6 +548,8 @@ function initNotificationDropdown(){
    const nodes=path.length?path:(()=>{const a=[];let n=e.target;while(n){a.push(n);n=n.parentElement;}return a;})();
    const isBellHost=el=>{
     if(!(el instanceof Element)||!el.matches('a,button,[role="button"]'))return false;
+    // Jangan anggap tombol di dalam dropdown (termasuk tombol silang) sebagai ikon lonceng.
+    if(el.closest('#notificationPopover'))return false;
     const label=[el.id,el.getAttribute('aria-label'),el.getAttribute('title'),el.getAttribute('data-tooltip'),el.getAttribute('data-action'),el.getAttribute('data-testid')].filter(Boolean).join(' ').toLowerCase();
     if(/notification|notifikasi|bell|lonceng/.test(label))return true;
     return [...el.querySelectorAll('svg path')].some(pathEl=>/M15\s*17a3\s*3\s*0\s*1\s*1-6\s*0/i.test(pathEl.getAttribute('d')||''));
