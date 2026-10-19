@@ -482,18 +482,25 @@ function initNotificationDropdown(){
  // Cari tombol lonceng yang sudah ada pada setiap halaman, walaupun ID HTML-nya berbeda.
  let toggle=document.getElementById('notificationToggle');
  if(!toggle){
-  const candidates=[...document.querySelectorAll('button,[role="button"],a')];
+  // Prioritaskan elemen yang memang diberi label notifikasi.
+  const candidates=[...document.querySelectorAll('button,[role="button"]')];
   toggle=candidates.find(el=>{
-   const label=[el.getAttribute('aria-label'),el.getAttribute('title'),el.getAttribute('data-tooltip'),el.getAttribute('data-action')].filter(Boolean).join(' ').toLowerCase();
-   if(/notification|notifikasi|bell|lonceng/.test(label))return true;
-   const svg=el.querySelector('svg');
-   if(!svg)return false;
-   const pathData=[...svg.querySelectorAll('path')].map(p=>p.getAttribute('d')||'').join(' ');
-   return /M15\s*17.*M6\s*9|M18\s*8.*M6\s*8|bell/i.test(pathData);
+   const label=[el.getAttribute('aria-label'),el.getAttribute('title'),el.getAttribute('data-tooltip'),el.getAttribute('data-action'),el.getAttribute('data-testid')].filter(Boolean).join(' ').toLowerCase();
+   return /notification|notifikasi|bell|lonceng/.test(label);
   });
+  // Fallback hanya untuk BUTTON, bukan link navigasi sidebar seperti Work Order.
+  if(!toggle){
+   toggle=candidates.find(el=>{
+    const svg=el.querySelector('svg');
+    if(!svg)return false;
+    const pathData=[...svg.querySelectorAll('path')].map(p=>p.getAttribute('d')||'').join(' ');
+    return /M15\s*17.*M6\s*9/.test(pathData);
+   });
+  }
   if(toggle)toggle.id='notificationToggle';
  }
- if(!toggle)return;
+ // Jangan pernah mengubah link navigasi menjadi tombol notifikasi.
+ if(!toggle || toggle.tagName==='A')return;
  const READ_KEY='dailyflow_notifications_read_v1';
  const icon=(kind)=>kind==='insight'
   ? '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>'
@@ -535,7 +542,7 @@ function initNotificationDropdown(){
  if(!toggle.dataset.notificationBound){toggle.dataset.notificationBound='1';toggle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();});}
  const mark=pop.querySelector('[data-mark-all-read]');if(mark&&!mark.dataset.bound){mark.dataset.bound='1';mark.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),...getItems().map(n=>n.id)]);renderItems();});}
  const close=pop.querySelector('[data-notification-close]');if(close&&!close.dataset.bound){close.dataset.bound='1';close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=true;toggle.setAttribute('aria-expanded','false');});}
- if(!list.dataset.notificationBound){list.dataset.notificationBound='1';list.addEventListener('click',e=>{const item=e.target.closest('[data-notification-item]');if(!item)return;e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),item.getAttribute('data-notification-item')]);renderItems();});}
+ if(!list.dataset.notificationBound){list.dataset.notificationBound='1';list.addEventListener('click',e=>{const item=e.target.closest('button[data-notification-item]');if(!item)return;e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),item.getAttribute('data-notification-item')]);renderItems();});}
  renderItems();
  if(!document.documentElement.dataset.notificationOutsideBound){document.documentElement.dataset.notificationOutsideBound='1';document.addEventListener('click',e=>{const t=document.getElementById('notificationToggle'),p=document.getElementById('notificationPopover');if(t&&p&&!t.contains(e.target)&&!p.contains(e.target)){p.hidden=true;t.setAttribute('aria-expanded','false');}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const t=document.getElementById('notificationToggle'),p=document.getElementById('notificationPopover');if(p){p.hidden=true;t?.setAttribute('aria-expanded','false');}}});}
 }
