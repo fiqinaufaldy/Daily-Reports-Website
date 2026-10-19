@@ -119,7 +119,7 @@ let creativeCalendarRequestStarted = false;
   style.id = 'creativeCalendarStyles';
   style.textContent = `
     .day.has-items::after{content:none!important}
-    .day.has-creative-events{position:relative;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--calendar-creative-color,#8b5cf6) 28%,transparent)}
+    .day.has-creative-events:not(.has-workday-status){position:relative;box-shadow:inset 0 0 0 1px var(--calendar-creative-color,#8b5cf6)!important;border-color:var(--calendar-creative-color,#8b5cf6)!important}\n    .day:not(.has-workday-status):not(.has-creative-events){box-shadow:none!important;border-color:transparent!important;background:transparent!important}\n    .day.selected:not(.has-workday-status):not(.has-creative-events){background:transparent!important;color:inherit!important}
     .calendar-dot-row{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;height:7px;margin-top:2px;flex-wrap:nowrap}
     .calendar-dot-row .calendar-dot{display:block;flex:0 0 5px;width:5px;height:5px;border-radius:50%;margin:0;padding:0}
     .activity-calendar-dot{background:var(--calendar-activity-color,#ef4444)!important}
@@ -204,6 +204,7 @@ function applyCalendarColors(){
   statusStyle.textContent = statusColors.map(([slug, color]) =>
     `.day.has-workday-status.workday-${slug}, body[data-theme=\"dark\"] .day.has-workday-status.workday-${slug}{box-shadow:inset 0 0 0 1px ${color} !important;--workday-color:${color} !important}.day.has-workday-status.workday-${slug} .workday-dot{background:${color} !important}.workday-card-${slug}{border-color:${color} !important;border-left:4px solid ${color} !important}.workday-card-${slug} strong{color:${color} !important}`
   ).join('\n');
+  statusStyle.textContent += '\n.day.has-workday-status{background:transparent!important;border-color:var(--workday-color,#c6a66b)!important;box-shadow:inset 0 0 0 1px var(--workday-color,#c6a66b)!important}';
   if (!statusStyle.isConnected) document.head.appendChild(statusStyle);
 }
 function saveCalendarColors(){
