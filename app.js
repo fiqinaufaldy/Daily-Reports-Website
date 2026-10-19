@@ -478,8 +478,9 @@ function renderSettings(){
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
 
 function initNotificationDropdown(){
- const toggle=$('#notificationToggle'), pop=$('#notificationPopover'), list=$('#notificationList');
- if(!toggle||!pop||!list)return;
+ // Gunakan tombol lonceng yang sudah ada di shell setiap halaman; jangan membuat tombol kedua.
+ const toggle=document.getElementById('notificationToggle');
+ if(!toggle)return;
  const READ_KEY='dailyflow_notifications_read_v1';
  const icon=(kind)=>kind==='insight'
   ? '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>'
@@ -491,35 +492,41 @@ function initNotificationDropdown(){
   const items=[];
   const todayActivities=activities.filter(a=>a.date===iso(today));
   const todayWorkdayStatus=workdayStatuses.find(x=>x.date===iso(today));
-  const nonWorkingDay=todayWorkdayStatus&&['Cuti','Day Payment','Sakit','Izin'].includes(todayWorkdayStatus.type);
+  const nonWorkingDay=todayWorkdayStatus&&['Cuti','Day Off','Day Payment','Sakit','Sick Leave','Izin','Annual Leave','Public Holiday'].includes(todayWorkdayStatus.type);
   if(todayActivities.length===0&&!nonWorkingDay)items.push({id:'activity-not-recorded-'+iso(today),kind:'insight',title:'Activity Not Recorded',desc:'Kamu belum mengisi data aktivitas hari ini. Yuk, catat aktivitasmu agar Daily Reports tetap lengkap.',time:'Hari ini',href:'daily-report.html'});
-  const overdue=reminders.filter(r=>!r.done&&r.date&&r.date<iso(today)).sort((a,b)=>a.date.localeCompare(b.date));
-  overdue.forEach(r=>items.push({id:'overdue-'+r.id,kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.date}.`,time:relTime(r.date),href:'reminder.html'}));
-  const upcoming=reminders.filter(r=>!r.done&&r.date&&r.date>=iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
-  upcoming.forEach(r=>items.push({id:'upcoming-'+r.id,kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}.`,time:relTime(r.date),href:'reminder.html'}));
+  reminders.filter(r=>!r.done&&r.date&&r.date<iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>items.push({id:'overdue-'+r.id,kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.deadline||r.date}.`,time:relTime(r.date),href:'reminder.html'}));
+  reminders.filter(r=>!r.done&&r.date&&r.date>=iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5).forEach(r=>items.push({id:'upcoming-'+r.id,kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}${r.deadline?' · deadline '+r.deadline:''}.`,time:relTime(r.date),href:'reminder.html'}));
   return items;
  };
+ // Buat hanya panel dropdown jika belum ada; tombol lonceng tetap tombol asli dari header.
+ let pop=document.getElementById('notificationPopover');
+ if(!pop){
+  pop=document.createElement('section');pop.id='notificationPopover';pop.hidden=true;
+  pop.style.cssText='position:absolute;top:calc(100% + 10px);right:0;width:min(390px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--panel,#1c2722);color:var(--text,#f3f5f4);border:1px solid var(--border,#34443b);border-radius:16px;box-shadow:0 16px 42px #0005;padding:0;z-index:10050;';
+  pop.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 14px 10px"><strong>Notifikasi</strong><button type="button" data-notification-close aria-label="Tutup notifikasi" style="border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer">×</button></div><button type="button" data-mark-all-read style="display:block;width:100%;padding:10px 14px;border:0;border-bottom:1px solid var(--border,#33443a);background:transparent;color:var(--text,inherit);text-align:right;font:inherit;font-size:12px;cursor:pointer">Tandai semua sudah dibaca</button><div id="notificationList"></div>';
+  const holder=toggle.parentElement||toggle;if(holder!==toggle&&getComputedStyle(holder).position==='static')holder.style.position='relative';holder.appendChild(pop);
+ } else if(!pop.querySelector('[data-mark-all-read]')){
+  const mark=document.createElement('button');mark.type='button';mark.textContent='Tandai semua sudah dibaca';mark.setAttribute('data-mark-all-read','');mark.style.cssText='display:block;width:100%;padding:10px 14px;border:0;border-bottom:1px solid var(--border,#33443a);background:transparent;color:var(--text,inherit);text-align:right;font:inherit;font-size:12px;cursor:pointer;';
+  pop.insertBefore(mark,pop.querySelector('#notificationList')||pop.firstChild);
+ }
+ const list=pop.querySelector('#notificationList');if(!list)return;
  let badge=toggle.querySelector('.notification-badge, .notification-count, [data-notification-count]');
  if(!badge){badge=document.createElement('span');badge.className='notification-badge';badge.setAttribute('data-notification-count','');badge.style.cssText='position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 4px;border-radius:999px;background:#e5484d;color:white;font-size:12px;font-weight:700;line-height:19px;text-align:center;display:none;';if(getComputedStyle(toggle).position==='static')toggle.style.position='relative';toggle.appendChild(badge);}
- if(!pop.querySelector('[data-mark-all-read]')){
-  const mark=document.createElement('button');mark.type='button';mark.textContent='Tandai semua sudah dibaca';mark.setAttribute('data-mark-all-read','');mark.style.cssText='display:block;width:100%;padding:10px 14px;border:0;border-bottom:1px solid var(--border, #33443a);background:transparent;color:var(--text, inherit);text-align:right;font:inherit;font-size:12px;cursor:pointer;';
-  pop.insertBefore(mark,list);
- }
  function renderItems(){
-  const items=getItems(),read=readIds();
-  const unread=items.filter(n=>!read.includes(n.id));
+  const items=getItems(),read=readIds(),unread=items.filter(n=>!read.includes(n.id));
   badge.textContent=String(unread.length);badge.style.display=unread.length?'inline-block':'none';badge.setAttribute('aria-label',unread.length+' notifikasi belum dibaca');
-  list.innerHTML=items.map(n=>`<a class="notification-item${read.includes(n.id)?' is-read':''}" href="${n.href||'reminder.html'}" data-notification-item="${escapeHtml(n.id)}" style="${read.includes(n.id)?'opacity:.65;':''}"><span class="notification-item-icon">${icon(n.kind)}</span><span><div class="notification-item-title">${escapeHtml(n.title)}</div><div class="notification-item-desc">${escapeHtml(n.desc)}</div><div class="notification-item-time">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty">Belum ada notifikasi.</div>';
-  const mark=pop.querySelector('[data-mark-all-read]');if(mark){mark.disabled=unread.length===0;mark.style.opacity=unread.length?'1':'.5';}
+  list.innerHTML=items.map(n=>`<a class="notification-item${read.includes(n.id)?' is-read':''}" href="${n.href||'reminder.html'}" data-notification-item="${escapeHtml(n.id)}" style="display:flex;gap:10px;padding:12px 14px;color:inherit;text-decoration:none;border-bottom:1px solid var(--border,#33443a);cursor:pointer;${read.includes(n.id)?'opacity:.62;':''}"><span class="notification-item-icon">${icon(n.kind)}</span><span style="min-width:0"><div class="notification-item-title" style="font-size:13px;font-weight:700;margin-bottom:3px">${escapeHtml(n.title)}</div><div class="notification-item-desc" style="font-size:12px;line-height:1.45;opacity:.82">${escapeHtml(n.desc)}</div><div class="notification-item-time" style="font-size:11px;opacity:.6;margin-top:5px">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty" style="padding:18px 14px;text-align:center;opacity:.7">Belum ada notifikasi.</div>';
+  const mark=pop.querySelector('[data-mark-all-read]');if(mark){mark.disabled=!unread.length;mark.style.opacity=unread.length?'1':'.5';}
  }
- toggle.setAttribute('aria-expanded',String(!pop.hidden));
- toggle.onclick=(e)=>{e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();};
- pop.querySelector('[data-mark-all-read]').onclick=(e)=>{e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),...getItems().map(n=>n.id)]);renderItems();};
- list.onclick=(e)=>{const item=e.target.closest('[data-notification-item]');if(!item)return;const id=item.getAttribute('data-notification-item');saveReadIds([...readIds(),id]);item.classList.add('is-read');item.style.opacity='.65';const currentItems=getItems(),readNow=readIds(),unreadNow=currentItems.filter(n=>!readNow.includes(n.id));badge.textContent=String(unreadNow.length);badge.style.display=unreadNow.length?'inline-block':'none';badge.setAttribute('aria-label',unreadNow.length+' notifikasi belum dibaca');};
+ toggle.setAttribute('aria-label','Buka notifikasi');toggle.setAttribute('aria-expanded',String(!pop.hidden));
+ if(!toggle.dataset.notificationBound){toggle.dataset.notificationBound='1';toggle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();});}
+ const mark=pop.querySelector('[data-mark-all-read]');if(mark&&!mark.dataset.bound){mark.dataset.bound='1';mark.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),...getItems().map(n=>n.id)]);renderItems();});}
+ const close=pop.querySelector('[data-notification-close]');if(close&&!close.dataset.bound){close.dataset.bound='1';close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=true;toggle.setAttribute('aria-expanded','false');});}
+ if(!list.dataset.notificationBound){list.dataset.notificationBound='1';list.addEventListener('click',e=>{const item=e.target.closest('[data-notification-item]');if(!item)return;saveReadIds([...readIds(),item.getAttribute('data-notification-item')]);});}
  renderItems();
- document.addEventListener('click',e=>{if(!pop.contains(e.target)&&!toggle.contains(e.target)){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
- document.addEventListener('keydown',e=>{if(e.key==='Escape'){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
+ if(!document.documentElement.dataset.notificationOutsideBound){document.documentElement.dataset.notificationOutsideBound='1';document.addEventListener('click',e=>{const t=document.getElementById('notificationToggle'),p=document.getElementById('notificationPopover');if(t&&p&&!t.contains(e.target)&&!p.contains(e.target)){p.hidden=true;t.setAttribute('aria-expanded','false');}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const t=document.getElementById('notificationToggle'),p=document.getElementById('notificationPopover');if(p){p.hidden=true;t?.setAttribute('aria-expanded','false');}}});}
 }
+
 function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
 try{const savedTheme=localStorage.getItem(KEYS.theme);if(savedTheme==='dark'||savedTheme==='light'){document.documentElement.dataset.theme=savedTheme;document.body.dataset.theme=savedTheme;}}catch{}
