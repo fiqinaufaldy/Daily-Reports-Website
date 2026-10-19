@@ -515,7 +515,7 @@ function initNotificationDropdown(){
  toggle.setAttribute('aria-expanded',String(!pop.hidden));
  toggle.onclick=(e)=>{e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();};
  pop.querySelector('[data-mark-all-read]').onclick=(e)=>{e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),...getItems().map(n=>n.id)]);renderItems();};
- list.onclick=(e)=>{const item=e.target.closest('[data-notification-item]');if(!item)return;const id=item.getAttribute('data-notification-item');saveReadIds([...readIds(),id]);renderItems();};
+ list.onclick=(e)=>{const item=e.target.closest('[data-notification-item]');if(!item)return;const id=item.getAttribute('data-notification-item');saveReadIds([...readIds(),id]);item.classList.add('is-read');item.style.opacity='.65';const currentItems=getItems(),readNow=readIds(),unreadNow=currentItems.filter(n=>!readNow.includes(n.id));badge.textContent=String(unreadNow.length);badge.style.display=unreadNow.length?'inline-block':'none';badge.setAttribute('aria-label',unreadNow.length+' notifikasi belum dibaca');};
  renderItems();
  document.addEventListener('click',e=>{if(!pop.contains(e.target)&&!toggle.contains(e.target)){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
