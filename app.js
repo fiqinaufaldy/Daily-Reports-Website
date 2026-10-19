@@ -660,3 +660,4 @@ document.addEventListener('DOMContentLoaded',()=>{renderPage();loadCreativeCalen
 document.addEventListener('paste',handleScreenshotPaste);
 window.addEventListener('resize',()=>{if(document.body.dataset.page==='analytics')renderAnalytics();});
 })();
+W
