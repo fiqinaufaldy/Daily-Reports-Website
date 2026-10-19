@@ -162,29 +162,11 @@ function loadCreativeCalendarEvents(force=false) {
       creativeCalendarError = '';
       creativeCalendarLoadedAt = new Date();
     }
-    const currentPage = document.body.dataset.page;
+    const currentPage = document.body.dataset.page || 'dashboard';
     if (currentPage === 'calendar') {
       renderCalendarPage();
     } else if (currentPage === 'dashboard') {
-      // Refresh kalender Dashboard immediately after Google Calendar events load.
-      // Previously the dots only appeared after the user clicked a date and rerendered the dashboard.
-      const dashboardCalendar = document.getElementById('dashboardCalendar');
-      if (dashboardCalendar) dashboardCalendar.innerHTML = calendarMarkup(shownMonth, true);
-      // Rebind date and month controls after refreshing the calendar markup.
-      if (dashboardCalendar) {
-        dashboardCalendar.querySelectorAll('[data-month]').forEach(button => {
-          button.addEventListener('click', () => {
-            shownMonth = new Date(shownMonth.getFullYear(), shownMonth.getMonth() + Number(button.dataset.month), 1);
-            renderDashboard();
-          });
-        });
-        dashboardCalendar.querySelectorAll('[data-date]').forEach(button => {
-          button.addEventListener('click', () => {
-            selectedDate = button.dataset.date;
-            renderDashboard();
-          });
-        });
-      }
+      renderDashboard();
     }
   }
   window[callbackName] = payload => finish(null, payload);
@@ -540,17 +522,10 @@ function initNotificationDropdown(){
   return items;
  };
  let pop=document.getElementById('notificationPopover');
- // Paksa hilangkan header lama jika popover sudah dibuat oleh versi script sebelumnya.
- if(pop){
-  pop.querySelectorAll('[data-notification-close]').forEach(el=>el.remove());
-  [...pop.children].forEach(child=>{
-   if(child.querySelector('strong')?.textContent.trim().toLowerCase()==='notifikasi')child.remove();
-  });
- }
  if(!pop){
   pop=document.createElement('section');pop.id='notificationPopover';pop.hidden=true;
   pop.style.cssText='position:absolute;top:calc(100% + 10px);right:0;width:min(390px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--panel,#1c2722);color:var(--text,#f3f5f4);border:1px solid var(--border,#34443b);border-radius:16px;box-shadow:0 16px 42px #0005;padding:0;z-index:10050;';
-  pop.innerHTML='<button type="button" data-mark-all-read style="display:block;width:100%;padding:10px 14px;border:0;border-bottom:1px solid var(--border,#33443a);background:transparent;color:var(--text,inherit);text-align:right;font:inherit;font-size:12px;cursor:pointer">Tandai semua sudah dibaca</button><div id="notificationList"></div>';
+  pop.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 14px 10px"><strong>Notifikasi</strong><button type="button" data-notification-close aria-label="Tutup notifikasi" style="border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer">×</button></div><button type="button" data-mark-all-read style="display:block;width:100%;padding:10px 14px;border:0;border-bottom:1px solid var(--border,#33443a);background:transparent;color:var(--text,inherit);text-align:right;font:inherit;font-size:12px;cursor:pointer">Tandai semua sudah dibaca</button><div id="notificationList"></div>';
   // Tempatkan panel pada wadah ikon/header, bukan pada elemen link yang dapat mengubah halaman.
   const holder=toggle.parentElement||toggle;
   if(holder!==toggle&&getComputedStyle(holder).position==='static')holder.style.position='relative';
@@ -603,6 +578,7 @@ function initNotificationDropdown(){
   },true);
  }
  const mark=pop.querySelector('[data-mark-all-read]');if(mark&&!mark.dataset.bound){mark.dataset.bound='1';mark.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),...getItems().map(n=>n.id)]);renderItems();});}
+ const close=pop.querySelector('[data-notification-close]');if(close&&!close.dataset.bound){close.dataset.bound='1';close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=true;toggle.setAttribute('aria-expanded','false');});}
  if(!list.dataset.notificationBound){list.dataset.notificationBound='1';list.addEventListener('click',e=>{const item=e.target.closest('button[data-notification-item]');if(!item)return;e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),item.getAttribute('data-notification-item')]);renderItems();});}
  renderItems();
  if(!document.documentElement.dataset.notificationOutsideBound){document.documentElement.dataset.notificationOutsideBound='1';document.addEventListener('click',e=>{const t=document.getElementById('notificationToggle'),p=document.getElementById('notificationPopover');if(t&&p&&!t.contains(e.target)&&!p.contains(e.target)){p.hidden=true;t.setAttribute('aria-expanded','false');}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const t=document.getElementById('notificationToggle'),p=document.getElementById('notificationPopover');if(p){p.hidden=true;t?.setAttribute('aria-expanded','false');}}});}
