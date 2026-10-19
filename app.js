@@ -162,7 +162,30 @@ function loadCreativeCalendarEvents(force=false) {
       creativeCalendarError = '';
       creativeCalendarLoadedAt = new Date();
     }
-    if (document.body.dataset.page === 'calendar') renderCalendarPage();
+    const currentPage = document.body.dataset.page;
+    if (currentPage === 'calendar') {
+      renderCalendarPage();
+    } else if (currentPage === 'dashboard') {
+      // Refresh kalender Dashboard immediately after Google Calendar events load.
+      // Previously the dots only appeared after the user clicked a date and rerendered the dashboard.
+      const dashboardCalendar = document.getElementById('dashboardCalendar');
+      if (dashboardCalendar) dashboardCalendar.innerHTML = calendarMarkup(shownMonth, true);
+      // Rebind date and month controls after refreshing the calendar markup.
+      if (dashboardCalendar) {
+        dashboardCalendar.querySelectorAll('[data-month]').forEach(button => {
+          button.addEventListener('click', () => {
+            shownMonth = new Date(shownMonth.getFullYear(), shownMonth.getMonth() + Number(button.dataset.month), 1);
+            renderDashboard();
+          });
+        });
+        dashboardCalendar.querySelectorAll('[data-date]').forEach(button => {
+          button.addEventListener('click', () => {
+            selectedDate = button.dataset.date;
+            renderDashboard();
+          });
+        });
+      }
+    }
   }
   window[callbackName] = payload => finish(null, payload);
   script.onerror = () => finish(new Error('Gagal memuat data Google Calendar.'));
