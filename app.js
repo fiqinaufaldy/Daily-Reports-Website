@@ -478,36 +478,28 @@ function renderSettings(){
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
 
 function initNotificationDropdown(){
- // Satu dropdown notifikasi global yang konsisten di semua halaman.
- let host=document.getElementById('globalNotificationHost');
- if(!host){
-  host=document.createElement('div');
-  host.id='globalNotificationHost';
-  host.style.cssText='position:fixed;top:18px;right:22px;z-index:10050;font-family:inherit;pointer-events:auto;';
-  host.innerHTML=`
-   <button type="button" id="globalNotificationToggle" aria-label="Buka notifikasi" aria-expanded="false" style="position:relative;width:44px;height:44px;border:1px solid var(--border,#34443b);border-radius:14px;background:var(--panel,#1c2722);color:var(--text,#f3f5f4);display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 14px #0002;pointer-events:auto">
-    <svg aria-hidden="true" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-    <span id="globalNotificationBadge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#e34b4b;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center"></span>
-   </button>
-   <section id="globalNotificationPopover" hidden style="position:absolute;top:52px;right:0;width:min(390px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--panel,#1c2722);color:var(--text,#f3f5f4);border:1px solid var(--border,#34443b);border-radius:16px;box-shadow:0 16px 42px #0005;padding:14px;pointer-events:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px"><strong>Notifikasi</strong><button type="button" id="globalNotificationClose" aria-label="Tutup notifikasi" style="border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer">×</button></div>
-    <div id="globalNotificationList"></div>
-   </section>`;
-  document.body.appendChild(host);
-  if(!document.getElementById('globalNotificationStyles')){
-   const st=document.createElement('style');st.id='globalNotificationStyles';
-   st.textContent=`#globalNotificationHost .notification-item{display:flex;gap:10px;padding:11px 8px;color:inherit;text-decoration:none;border-bottom:1px solid var(--border,#34443b);border-radius:8px;cursor:pointer;pointer-events:auto}#globalNotificationHost .notification-item:hover{background:var(--hover,#26352d)}#globalNotificationHost .notification-item:focus-visible{outline:2px solid var(--accent,#6fb895);outline-offset:2px}#globalNotificationHost .notification-item-icon{font-size:18px;flex-shrink:0}#globalNotificationHost .notification-item-title{font-size:13px;font-weight:700;margin-bottom:3px}#globalNotificationHost .notification-item-desc{font-size:12px;line-height:1.45;opacity:.82}#globalNotificationHost .notification-item-time{font-size:11px;opacity:.6;margin-top:5px}#globalNotificationHost .notification-empty{padding:18px 8px;text-align:center;font-size:13px;opacity:.7}@media(max-width:600px){#globalNotificationHost{top:12px!important;right:12px!important}}`;
-   document.head.appendChild(st);
-  }
+ // Gunakan tombol lonceng yang sudah ada di header. Jangan membuat tombol notifikasi kedua.
+ const toggle=document.getElementById('notificationToggle');
+ if(!toggle)return;
+ // Bersihkan host tombol duplikat dari versi sebelumnya jika masih ada di DOM.
+ document.getElementById('globalNotificationHost')?.remove();
+ toggle.setAttribute('aria-label','Buka notifikasi');
+ toggle.setAttribute('aria-expanded','false');
+ toggle.style.position=toggle.style.position||'relative';
+ let badge=document.getElementById('notificationBadge');
+ if(!badge){badge=document.createElement('span');badge.id='notificationBadge';badge.style.cssText='display:none;position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#e34b4b;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center';toggle.appendChild(badge);}
+ // Letakkan dropdown di sebelah tombol lonceng yang sudah ada.
+ let pop=document.getElementById('notificationPopover');
+ if(!pop){
+  const holder=toggle.parentElement||toggle;
+  if(holder!==toggle && getComputedStyle(holder).position==='static')holder.style.position='relative';
+  pop=document.createElement('section');pop.id='notificationPopover';pop.hidden=true;
+  pop.style.cssText='position:absolute;top:calc(100% + 10px);right:0;width:min(390px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--panel,#1c2722);color:var(--text,#f3f5f4);border:1px solid var(--border,#34443b);border-radius:16px;box-shadow:0 16px 42px #0005;padding:14px;z-index:10050';
+  pop.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px"><strong>Notifikasi</strong><button type="button" id="notificationClose" aria-label="Tutup notifikasi" style="border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer">×</button></div><div id="notificationList"></div>';
+  holder.appendChild(pop);
  }
- // Semua selector di-scope ke host supaya tidak salah mengambil tombol dashboard lama
- // jika halaman masih memiliki elemen dengan ID notifikasi yang sama.
- const toggle=host.querySelector('#globalNotificationToggle');
- const pop=host.querySelector('#globalNotificationPopover');
- const list=host.querySelector('#globalNotificationList');
- const badge=host.querySelector('#globalNotificationBadge');
- const close=host.querySelector('#globalNotificationClose');
- if(!toggle||!pop||!list)return;
+ const list=pop.querySelector('#notificationList')||pop.querySelector('#globalNotificationList');
+ if(!list)return;
  const notifIcon=kind=>kind==='insight'?'📝':'🔔';
  const relTime=date=>{if(!date)return'Hari ini';const d=new Date(date+'T00:00:00');const days=Math.floor((new Date()-d)/86400000);return days<=0?'Hari ini':days+' hari lalu';};
  function renderItems(){
@@ -518,19 +510,15 @@ function initNotificationDropdown(){
   if(todayActivities.length===0&&!nonWorkingDay)latest.push({kind:'insight',title:'Activity Not Recorded',desc:'Kamu belum mengisi data aktivitas hari ini. Yuk, catat aktivitasmu agar Daily Reports tetap lengkap.',time:'Hari ini',href:'daily-report.html'});
   reminders.filter(r=>!r.done&&r.date&&r.date<todayKey).sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>latest.push({kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.deadline||r.date}.`,time:relTime(r.date),href:'reminder.html'}));
   reminders.filter(r=>!r.done&&r.date&&r.date>=todayKey).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5).forEach(r=>latest.push({kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}${r.deadline?' · deadline '+r.deadline:''}.`,time:relTime(r.date),href:'reminder.html'}));
-  list.innerHTML=latest.map(n=>`<a class="notification-item" href="${n.href}" data-notification-item><span class="notification-item-icon">${notifIcon(n.kind)}</span><span style="min-width:0"><div class="notification-item-title">${escapeHtml(n.title)}</div><div class="notification-item-desc">${escapeHtml(n.desc)}</div><div class="notification-item-time">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty">Belum ada notifikasi.</div>';
-  if(badge){badge.textContent=String(latest.length);badge.style.display=latest.length?'block':'none';badge.setAttribute('aria-label',`${latest.length} notifikasi`);}
+  list.innerHTML=latest.map(n=>`<a class="notification-item" href="${n.href}" data-notification-item style="display:flex;gap:10px;padding:11px 8px;color:inherit;text-decoration:none;border-bottom:1px solid var(--border,#34443b);border-radius:8px;cursor:pointer"><span class="notification-item-icon">${notifIcon(n.kind)}</span><span style="min-width:0"><div class="notification-item-title" style="font-size:13px;font-weight:700;margin-bottom:3px">${escapeHtml(n.title)}</div><div class="notification-item-desc" style="font-size:12px;line-height:1.45;opacity:.82">${escapeHtml(n.desc)}</div><div class="notification-item-time" style="font-size:11px;opacity:.6;margin-top:5px">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div style="padding:18px 8px;text-align:center;font-size:13px;opacity:.7">Belum ada notifikasi.</div>';
+  badge.textContent=String(latest.length);badge.style.display=latest.length?'block':'none';badge.setAttribute('aria-label',`${latest.length} notifikasi`);
  }
  renderItems();
- toggle.onclick=e=>{e.preventDefault();e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();};
- close.onclick=e=>{e.preventDefault();e.stopPropagation();pop.hidden=true;toggle.setAttribute('aria-expanded','false');};
- // Jangan menahan navigasi tautan: item reminder harus benar-benar membuka halaman tujuan.
- if(!list.dataset.clickBound){list.dataset.clickBound='1';list.addEventListener('click',e=>{const item=e.target.closest('[data-notification-item]');if(!item)return;if(!item.getAttribute('href')||item.getAttribute('href')==='#'){e.preventDefault();}});}
- if(!document.documentElement.dataset.globalNotificationOutsideBound){
-  document.documentElement.dataset.globalNotificationOutsideBound='1';
-  document.addEventListener('click',e=>{const currentHost=document.getElementById('globalNotificationHost');if(!currentHost)return;const currentToggle=currentHost.querySelector('#globalNotificationToggle'),currentPop=currentHost.querySelector('#globalNotificationPopover');if(!currentPop||!currentToggle)return;if(!currentHost.contains(e.target)){currentPop.hidden=true;currentToggle.setAttribute('aria-expanded','false');}});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){const currentHost=document.getElementById('globalNotificationHost');const currentPop=currentHost?.querySelector('#globalNotificationPopover'),currentToggle=currentHost?.querySelector('#globalNotificationToggle');if(currentPop){currentPop.hidden=true;currentToggle?.setAttribute('aria-expanded','false');}}});
- }
+ // Bind handler sekali saja, walaupun renderPage dipanggil berulang.
+ if(!toggle.dataset.notificationBound){toggle.dataset.notificationBound='1';toggle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();});}
+ const close=pop.querySelector('#notificationClose');
+ if(close&&!close.dataset.bound){close.dataset.bound='1';close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=true;toggle.setAttribute('aria-expanded','false');});}
+ if(!document.documentElement.dataset.notificationOutsideBound){document.documentElement.dataset.notificationOutsideBound='1';document.addEventListener('click',e=>{const currentToggle=document.getElementById('notificationToggle'),currentPop=document.getElementById('notificationPopover');if(currentToggle&&currentPop&&!currentToggle.contains(e.target)&&!currentPop.contains(e.target)){currentPop.hidden=true;currentToggle.setAttribute('aria-expanded','false');}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){const currentToggle=document.getElementById('notificationToggle'),currentPop=document.getElementById('notificationPopover');if(currentPop){currentPop.hidden=true;currentToggle?.setAttribute('aria-expanded','false');}}});}
 }
 function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
