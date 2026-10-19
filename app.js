@@ -539,8 +539,37 @@ function initNotificationDropdown(){
   const mark=pop.querySelector('[data-mark-all-read]');if(mark){mark.disabled=!unread.length;mark.style.opacity=unread.length?'1':'.5';}
  }
  toggle.setAttribute('aria-label','Buka notifikasi');toggle.setAttribute('aria-expanded',String(!pop.hidden));
- // Tangkap klik pada fase capture agar anchor/default navigation dan handler parent tidak sempat berjalan.
- if(!toggle.dataset.notificationBound){toggle.dataset.notificationBound='1';toggle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();},true);}
+ // Tangkap klik di tingkat document sebelum event mencapai link/handler header.
+ // Ini penting karena ikon lonceng di beberapa halaman berada di dalam anchor yang href-nya reminder.html.
+ if(!document.documentElement.dataset.dailyFlowNotificationCaptureBound){
+  document.documentElement.dataset.dailyFlowNotificationCaptureBound='1';
+  document.addEventListener('click',e=>{
+   const path=typeof e.composedPath==='function'?e.composedPath():[];
+   const nodes=path.length?path:(()=>{const a=[];let n=e.target;while(n){a.push(n);n=n.parentElement;}return a;})();
+   const isBellHost=el=>{
+    if(!(el instanceof Element)||!el.matches('a,button,[role="button"]'))return false;
+    const label=[el.id,el.getAttribute('aria-label'),el.getAttribute('title'),el.getAttribute('data-tooltip'),el.getAttribute('data-action'),el.getAttribute('data-testid')].filter(Boolean).join(' ').toLowerCase();
+    if(/notification|notifikasi|bell|lonceng/.test(label))return true;
+    return [...el.querySelectorAll('svg path')].some(pathEl=>/M15\s*17a3\s*3\s*0\s*1\s*1-6\s*0/i.test(pathEl.getAttribute('d')||''));
+   };
+   const host=nodes.find(isBellHost);
+   if(!host)return;
+   const currentPop=document.getElementById('notificationPopover');
+   if(!currentPop)return;
+   e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   // Gunakan host yang benar-benar diklik, bukan link Work Order yang kebetulan terdeteksi lebih dulu.
+   if(host!==toggle){toggle=host;toggle.id='notificationToggle';}
+   const holder=toggle.parentElement;
+   if(holder&&currentPop.parentElement!==holder){
+    if(getComputedStyle(holder).position==='static')holder.style.position='relative';
+    holder.appendChild(currentPop);
+   }
+   currentPop.hidden=!currentPop.hidden;
+   toggle.setAttribute('aria-label','Buka notifikasi');
+   toggle.setAttribute('aria-expanded',String(!currentPop.hidden));
+   if(!currentPop.hidden)renderItems();
+  },true);
+ }
  const mark=pop.querySelector('[data-mark-all-read]');if(mark&&!mark.dataset.bound){mark.dataset.bound='1';mark.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),...getItems().map(n=>n.id)]);renderItems();});}
  const close=pop.querySelector('[data-notification-close]');if(close&&!close.dataset.bound){close.dataset.bound='1';close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();pop.hidden=true;toggle.setAttribute('aria-expanded','false');});}
  if(!list.dataset.notificationBound){list.dataset.notificationBound='1';list.addEventListener('click',e=>{const item=e.target.closest('button[data-notification-item]');if(!item)return;e.preventDefault();e.stopPropagation();saveReadIds([...readIds(),item.getAttribute('data-notification-item')]);renderItems();});}
