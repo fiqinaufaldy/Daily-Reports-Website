@@ -27,25 +27,48 @@ const icon = (name, cls='') => `<span class="svg-icon ${cls}">${ICONS[name]||''}
 
 const KEYS = {activities:'dailyflow_activities_v1', reminders:'dailyflow_reminders_v1', notes:'dailyflow_notes_v1', units:'dailyflow_units_v1', theme:'dailyflow_theme_v1', profile:'dailyflow_profile_v1', unitBranding:'dailyflow_unit_branding_v1', workdays:'dailyflow_workday_status_v1'};
 
-// Sinkronkan favicon tab browser dengan foto profil yang tersimpan di Settings.
+// Sinkronkan favicon tab browser dengan foto profil berbentuk lingkaran.
 function syncProfileFavicon() {
   try {
     const savedProfile = JSON.parse(localStorage.getItem(KEYS.profile) || '{}');
-    if (!savedProfile.photo) return; // Pertahankan favicon default jika belum ada foto.
+    if (!savedProfile.photo) return;
 
-    let favicon = document.querySelector('link[rel~="icon"]');
-    if (!favicon) {
-      favicon = document.createElement('link');
-      favicon.rel = 'icon';
-      document.head.appendChild(favicon);
-    }
+    const img = new Image();
+    img.onload = () => {
+      const size = 64;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    favicon.href = savedProfile.photo;
-    if (savedProfile.photo.startsWith('data:image/webp')) favicon.type = 'image/webp';
-    else if (savedProfile.photo.startsWith('data:image/png')) favicon.type = 'image/png';
-    else if (savedProfile.photo.startsWith('data:image/svg+xml')) favicon.type = 'image/svg+xml';
-    else if (savedProfile.photo.startsWith('data:image/gif')) favicon.type = 'image/gif';
-    else favicon.type = 'image/jpeg';
+      // Potong foto menjadi lingkaran dan pertahankan transparansi di sudut.
+      ctx.clearRect(0, 0, size, size);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+
+      const width = img.naturalWidth || img.width;
+      const height = img.naturalHeight || img.height;
+      const scale = Math.max(size / width, size / height);
+      const drawWidth = width * scale;
+      const drawHeight = height * scale;
+      ctx.drawImage(img, (size - drawWidth) / 2, (size - drawHeight) / 2, drawWidth, drawHeight);
+      ctx.restore();
+
+      let favicon = document.querySelector('link[rel~="icon"]');
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        document.head.appendChild(favicon);
+      }
+      favicon.type = 'image/png';
+      favicon.href = canvas.toDataURL('image/png');
+    };
+    img.onerror = () => console.warn('Foto profil tidak dapat dimuat sebagai favicon.');
+    img.src = savedProfile.photo;
   } catch (error) {
     console.warn('Favicon foto profil tidak dapat diperbarui.', error);
   }
