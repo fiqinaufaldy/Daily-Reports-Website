@@ -479,7 +479,20 @@ function download(name,content,type){const blob=new Blob([content],{type}),url=U
 
 function initNotificationDropdown(){
  // Gunakan tombol lonceng yang sudah ada di shell setiap halaman; jangan membuat tombol kedua.
- const toggle=document.getElementById('notificationToggle');
+ // Cari tombol lonceng yang sudah ada pada setiap halaman, walaupun ID HTML-nya berbeda.
+ let toggle=document.getElementById('notificationToggle');
+ if(!toggle){
+  const candidates=[...document.querySelectorAll('button,[role="button"],a')];
+  toggle=candidates.find(el=>{
+   const label=[el.getAttribute('aria-label'),el.getAttribute('title'),el.getAttribute('data-tooltip'),el.getAttribute('data-action')].filter(Boolean).join(' ').toLowerCase();
+   if(/notification|notifikasi|bell|lonceng/.test(label))return true;
+   const svg=el.querySelector('svg');
+   if(!svg)return false;
+   const pathData=[...svg.querySelectorAll('path')].map(p=>p.getAttribute('d')||'').join(' ');
+   return /M15\s*17.*M6\s*9|M18\s*8.*M6\s*8|bell/i.test(pathData);
+  });
+  if(toggle)toggle.id='notificationToggle';
+ }
  if(!toggle)return;
  const READ_KEY='dailyflow_notifications_read_v1';
  const icon=(kind)=>kind==='insight'
@@ -515,7 +528,7 @@ function initNotificationDropdown(){
  function renderItems(){
   const items=getItems(),read=readIds(),unread=items.filter(n=>!read.includes(n.id));
   badge.textContent=String(unread.length);badge.style.display=unread.length?'inline-block':'none';badge.setAttribute('aria-label',unread.length+' notifikasi belum dibaca');
-  list.innerHTML=items.map(n=>`<a class="notification-item${read.includes(n.id)?' is-read':''}" href="${n.href||'reminder.html'}" data-notification-item="${escapeHtml(n.id)}" style="display:flex;gap:10px;padding:12px 14px;color:inherit;text-decoration:none;border-bottom:1px solid var(--border,#33443a);cursor:pointer;${read.includes(n.id)?'opacity:.62;':''}"><span class="notification-item-icon">${icon(n.kind)}</span><span style="min-width:0"><div class="notification-item-title" style="font-size:13px;font-weight:700;margin-bottom:3px">${escapeHtml(n.title)}</div><div class="notification-item-desc" style="font-size:12px;line-height:1.45;opacity:.82">${escapeHtml(n.desc)}</div><div class="notification-item-time" style="font-size:11px;opacity:.6;margin-top:5px">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty" style="padding:18px 14px;text-align:center;opacity:.7">Belum ada notifikasi.</div>';
+  list.innerHTML=items.map(n=>`<button type="button" class="notification-item${read.includes(n.id)?' is-read':''}" data-notification-item="${escapeHtml(n.id)}" style="display:flex;width:100%;text-align:left;gap:10px;padding:12px 14px;color:inherit;font:inherit;background:transparent;border:0;border-bottom:1px solid var(--border,#33443a);cursor:pointer;${read.includes(n.id)?'opacity:.62;':''}"><span class="notification-item-icon">${icon(n.kind)}</span><span style="min-width:0"><div class="notification-item-title" style="font-size:13px;font-weight:700;margin-bottom:3px">${escapeHtml(n.title)}</div><div class="notification-item-desc" style="font-size:12px;line-height:1.45;opacity:.82">${escapeHtml(n.desc)}</div><div class="notification-item-time" style="font-size:11px;opacity:.6;margin-top:5px">${escapeHtml(n.time)}</div></span></button>`).join('')||'<div class="notification-empty" style="padding:18px 14px;text-align:center;opacity:.7">Belum ada notifikasi.</div>';
   const mark=pop.querySelector('[data-mark-all-read]');if(mark){mark.disabled=!unread.length;mark.style.opacity=unread.length?'1':'.5';}
  }
  toggle.setAttribute('aria-label','Buka notifikasi');toggle.setAttribute('aria-expanded',String(!pop.hidden));
