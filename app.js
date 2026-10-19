@@ -119,7 +119,7 @@ let creativeCalendarRequestStarted = false;
   style.id = 'creativeCalendarStyles';
   style.textContent = `
     .day.has-items::after{content:none!important}
-    .day.has-creative-events:not(.has-workday-status){position:relative;box-shadow:inset 0 0 0 1px var(--calendar-creative-color,#8b5cf6)!important;border-color:var(--calendar-creative-color,#8b5cf6)!important}\n    .day:not(.has-workday-status):not(.has-creative-events){box-shadow:none!important;border-color:transparent!important;background:transparent!important}\n    .day.selected:not(.has-workday-status):not(.has-creative-events){background:transparent!important;color:inherit!important}
+    .day.has-creative-events:not(.has-workday-status){position:relative;box-shadow:inset 0 0 0 1px var(--calendar-creative-color,#8b5cf6)!important;border-color:var(--calendar-creative-color,#8b5cf6)!important}\n    .day.has-creative-events:not(.has-workday-status){animation:creativeEventAppear .42s ease-out both}\n    @keyframes creativeEventAppear{from{opacity:.45;transform:scale(.97)}to{opacity:1;transform:scale(1)}}\n    .day:not(.has-workday-status):not(.has-creative-events){box-shadow:none!important;border-color:transparent!important;background:transparent!important}\n    .day.selected:not(.has-workday-status):not(.has-creative-events){background:transparent!important;color:inherit!important}
     .calendar-dot-row{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;height:7px;margin-top:2px;flex-wrap:nowrap}
     .calendar-dot-row .calendar-dot{display:block;flex:0 0 5px;width:5px;height:5px;border-radius:50%;margin:0;padding:0}
     .activity-calendar-dot{background:var(--calendar-activity-color,#ef4444)!important}
@@ -166,7 +166,9 @@ function loadCreativeCalendarEvents(force=false) {
     if (currentPage === 'calendar') {
       renderCalendarPage();
     } else if (currentPage === 'dashboard') {
-      renderDashboard();
+      // Update only the calendar after Google Calendar responds; keep the rest
+      // of the Dashboard mounted to avoid a full-page redraw/flicker.
+      refreshDashboardCalendar(true);
     }
   }
   window[callbackName] = payload => finish(null, payload);
@@ -271,6 +273,20 @@ function calendarMarkup(targetMonth=shownMonth, compact=false){const year=target
 }
 function activityRow(a){const photo=a.photos?.[0],brand=unitBranding[a.unit]?.logo;return `<div class="activity" data-searchable><div class="activity-time">${escapeHtml(a.time||'—')}</div><div><div class="activity-name">${escapeHtml(a.name)}</div><div class="activity-desc">${escapeHtml(a.description||a.output||'Tanpa deskripsi')}</div><div class="activity-meta"><span class="tag blue">${brand?`<img class="activity-unit-logo" src="${brand}" alt="">`:''}${escapeHtml(a.unit||'Personal / Other')}</span><span class="tag ${statusClass(a.status)}">${statusLabel(a.status)}</span></div></div>${photo?`<img class="photo-thumb" src="${photo}" alt="Dokumentasi">`:`<div class="photo-thumb" style="display:grid;place-items:center;color:var(--muted)">＋</div>`}</div>`;}
 function reminderCard(r){return `<div class="reminder-card" data-searchable><div class="reminder-symbol">${icon(r.done?'done':'reminder')}</div><div style="min-width:0;flex:1"><strong>${escapeHtml(r.title)}</strong><small>${fmtDate(r.date,{day:'numeric',month:'short'})} · ${escapeHtml(r.time||'')}</small><div style="margin-top:6px;display:flex;gap:5px;align-items:center"><span class="tag ${r.done?'done':r.priority==='High'?'pending':r.priority==='Medium'?'progress':'done'}">${r.done?'Done':escapeHtml(r.priority)}</span><button class="btn small" data-reminder-toggle="${r.id}">${r.done?'Batal':'Selesai'}</button></div></div></div>`;}
+function refreshDashboardCalendar(animate=false){
+ const container=$('#dashboardCalendar');
+ if(!container)return;
+ container.innerHTML=calendarMarkup(shownMonth,true);
+ if(animate)container.classList.add('calendar-events-updating');
+ container.querySelectorAll('[data-month]').forEach(button=>button.addEventListener('click',()=>{
+  shownMonth=new Date(shownMonth.getFullYear(),shownMonth.getMonth()+Number(button.dataset.month),1);
+  refreshDashboardCalendar(false);
+ }));
+ container.querySelectorAll('[data-date]').forEach(button=>button.addEventListener('click',()=>{
+  selectedDate=button.dataset.date;
+  renderDashboard();
+ }));
+}
 function renderDashboard(){const root=$('#pageContent');if(!root)return;root.innerHTML=`${statsMarkup()}<div class="grid two-col"><section class="panel"><div class="panel-head"><div><h2>Calendar</h2><p>Pilih tanggal untuk melihat aktivitas yang tercatat</p></div><button class="btn small" onclick="location.href='calendar.html'">Buka Calendar ↗</button></div><div id="dashboardCalendar">${calendarMarkup(shownMonth,true)}</div></section><section class="panel"><div class="panel-head"><div><h2>Today’s Activities</h2><p>${fmtDate(selectedDate,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p></div><button class="btn primary small" data-open-activity>＋ Tambah</button></div><div class="activity-list" id="dashboardActivities">${activities.filter(a=>a.date===selectedDate).sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(activityRow).join('')||'<div class="empty">Belum ada aktivitas pada tanggal ini.</div>'}</div></section></div><section class="panel" style="margin-top:14px"><div class="panel-head"><div><h2>Work Order &amp; Reminder</h2><p>Hal yang perlu kamu tindak lanjuti</p></div><a class="btn small" href="reminder.html">Lihat Semua ↗</a></div><div class="reminder-list">${reminders.filter(r=>!r.done).slice(0,3).map(reminderCard).join('')||'<div class="empty">Tidak ada reminder aktif.</div>'}</div></section><section class="panel" style="margin-top:14px"><div class="panel-head"><div><h2>Quick Notes</h2><p>Notes singkat untuk hari ini</p></div></div><div class="form-grid"><div class="field"><label>${icon('win','note-label-icon')} TODAY'S WIN</label><textarea id="noteWin" placeholder="Apa pencapaian utama hari ini?">${escapeHtml(notes.win)}</textarea></div><div class="field"><label>${icon('challenge','note-label-icon')} CHALLENGE</label><textarea id="noteChallenge" placeholder="Kendala dan dampaknya...">${escapeHtml(notes.challenge)}</textarea></div><div class="field full"><label>${icon('focus','note-label-icon')} NEXT FOCUS</label><textarea id="noteFocus" placeholder="Priority berikutnya...">${escapeHtml(notes.focus)}</textarea></div></div><div class="form-actions"><button class="btn primary" id="saveNotes">Simpan Notes</button></div></section>`;
  root.querySelectorAll('[data-month]').forEach(b=>b.addEventListener('click',()=>{shownMonth=new Date(shownMonth.getFullYear(),shownMonth.getMonth()+Number(b.dataset.month),1);renderDashboard();}));
  root.querySelectorAll('[data-date]').forEach(b=>b.addEventListener('click',()=>{selectedDate=b.dataset.date;renderDashboard();}));
