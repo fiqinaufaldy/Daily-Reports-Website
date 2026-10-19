@@ -478,33 +478,35 @@ function renderSettings(){
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
 
 function initNotificationDropdown(){
- const toggle=$('#notificationToggle'), pop=$('#notificationPopover'), list=$('#notificationList');
- if(!toggle||!pop||!list)return;
- const icon=(kind)=>kind==='insight'
-  ? '<svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>'
-  : '<svg viewBox="0 0 24 24"><path d="M4 7l5-3 5 4 6-3v12l-6 3-5-4-5 3z"/><path d="M9 4v12M14 8v12"/></svg>';
- const relTime=(date)=>{if(!date)return 'Hari ini';const d=new Date(date+'T00:00:00'),days=Math.max(0,Math.floor((new Date()-d)/86400000));return days===0?'Hari ini':days+' hari lalu';};
- const items=[];
- const todayActivities=activities.filter(a=>a.date===iso(today));
- const todayWorkdayStatus=workdayStatuses.find(x=>x.date===iso(today));
- const nonWorkingDay=todayWorkdayStatus&&['Cuti','Day Payment','Sakit','Izin'].includes(todayWorkdayStatus.type);
- if(todayActivities.length===0&&!nonWorkingDay){
-  items.push({kind:'insight',title:'Activity Not Recorded',desc:'Kamu belum mengisi data aktivitas hari ini. Yuk, catat aktivitasmu agar Daily Reports tetap lengkap.',time:'Hari ini'});
+ // Pasang kontrol notifikasi secara global di semua halaman, bukan hanya Dashboard.
+ let host=document.querySelector('#globalNotificationHost');
+ if(!host){
+  host=document.createElement('div');host.id='globalNotificationHost';
+  host.style.cssText='position:fixed;top:18px;right:22px;z-index:9999;font-family:inherit;';
+  host.innerHTML=`<button type="button" id="notificationToggle" aria-label="Buka notifikasi" aria-expanded="false" style="position:relative;width:44px;height:44px;border:1px solid var(--border, #34443b);border-radius:14px;background:var(--panel, #1c2722);color:var(--text, #f3f5f4);display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 14px #0002"><span aria-hidden="true" style="font-size:21px;line-height:1">♧</span><span id="notificationBadge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#e34b4b;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center"></span></button><section id="notificationPopover" hidden style="position:absolute;top:52px;right:0;width:min(360px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--panel, #1c2722);color:var(--text, #f3f5f4);border:1px solid var(--border, #34443b);border-radius:16px;box-shadow:0 16px 42px #0005;padding:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px"><strong>Notifikasi</strong><button type="button" id="notificationClose" aria-label="Tutup notifikasi" style="border:0;background:transparent;color:inherit;font-size:22px;cursor:pointer">×</button></div><div id="notificationList"></div></section>`;
+  document.body.appendChild(host);
+  if(!document.getElementById('globalNotificationStyles')){const st=document.createElement('style');st.id='globalNotificationStyles';st.textContent=`#globalNotificationHost .notification-item{display:flex;gap:10px;padding:11px 8px;color:inherit;text-decoration:none;border-bottom:1px solid var(--border,#34443b);border-radius:8px}#globalNotificationHost .notification-item:hover{background:var(--hover,#26352d)}#globalNotificationHost .notification-item.is-read{opacity:.55}#globalNotificationHost .notification-item-icon{font-size:18px;flex-shrink:0}#globalNotificationHost .notification-item-title{font-size:13px;font-weight:700;margin-bottom:3px}#globalNotificationHost .notification-item-desc{font-size:12px;line-height:1.45;opacity:.82}#globalNotificationHost .notification-item-time{font-size:11px;opacity:.6;margin-top:5px}#globalNotificationHost .notification-empty{padding:18px 8px;text-align:center;font-size:13px;opacity:.7}@media(max-width:600px){#globalNotificationHost{top:12px!important;right:12px!important}}` ;document.head.appendChild(st);}
  }
- const overdue=reminders.filter(r=>!r.done&&r.date&&r.date<iso(today)).sort((a,b)=>a.date.localeCompare(b.date));
- overdue.forEach(r=>items.push({kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.date}.`,time:relTime(r.date),href:'reminder.html'}));
- const recent=reminders.filter(r=>!r.done&&r.date&&r.date>=iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
- recent.forEach(r=>items.push({kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}.`,time:relTime(r.date),href:'reminder.html'}));
-
- list.innerHTML=items.map((n,i)=>`<a class="notification-item" href="#" data-notification-item><span class="notification-item-icon">${icon(n.kind)}</span><span><div class="notification-item-title">${escapeHtml(n.title)}</div><div class="notification-item-desc">${escapeHtml(n.desc)}</div><div class="notification-item-time">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty">Belum ada notifikasi.</div>';
+ const toggle=$('#notificationToggle'),pop=$('#notificationPopover'),list=$('#notificationList'),badge=$('#notificationBadge');
+ if(!toggle||!pop||!list)return;
+ const notifIcon=kind=>kind==='insight'?'📝':'🔔';
+ const relTime=date=>{if(!date)return'Hari ini';const d=new Date(date+'T00:00:00'),days=Math.floor((new Date()-d)/86400000);return days<=0?'Hari ini':days+' hari lalu';};
+ function renderItems(){
+  const latest=[];const todayKey=iso(today);const todayActivities=activities.filter(a=>a.date===todayKey);const todayWorkdayStatus=workdayStatuses.find(x=>x.date===todayKey);const nonWorkingDay=todayWorkdayStatus&&['Day Off','Cuti','Day Payment','Sick Leave','Sakit','Izin','Annual Leave','Public Holiday'].includes(todayWorkdayStatus.type);
+  if(todayActivities.length===0&&!nonWorkingDay)latest.push({kind:'insight',title:'Activity Not Recorded',desc:'Kamu belum mengisi data aktivitas hari ini. Yuk, catat aktivitasmu agar Daily Reports tetap lengkap.',time:'Hari ini',href:'daily-report.html'});
+  reminders.filter(r=>!r.done&&r.date&&r.date<todayKey).sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>latest.push({kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.deadline||r.date}.`,time:relTime(r.date),href:'reminder.html'}));
+  reminders.filter(r=>!r.done&&r.date&&r.date>=todayKey).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5).forEach(r=>latest.push({kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}${r.deadline?' · deadline '+r.deadline:''}.`,time:relTime(r.date),href:'reminder.html'}));
+  list.innerHTML=latest.map((n,i)=>`<a class="notification-item" href="${n.href||'#'}" data-notification-item><span class="notification-item-icon">${notifIcon(n.kind)}</span><span style="min-width:0"><div class="notification-item-title">${escapeHtml(n.title)}</div><div class="notification-item-desc">${escapeHtml(n.desc)}</div><div class="notification-item-time">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty">Belum ada notifikasi.</div>';
+  if(badge){badge.textContent=String(latest.length);badge.style.display=latest.length?'block':'none';badge.setAttribute('aria-label',`${latest.length} notifikasi`);}
+ }
+ renderItems();
  toggle.setAttribute('aria-expanded',String(!pop.hidden));
- toggle.onclick=(e)=>{e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();};
- function renderItems(){const latest=[];const todayActivities=activities.filter(a=>a.date===iso(today));if(todayActivities.length===0){latest.push({kind:'insight',title:'Activity Not Recorded',desc:'Kamu belum mengisi data aktivitas hari ini. Yuk, catat aktivitasmu agar Daily Reports tetap lengkap.',time:'Hari ini'});}const overdueNow=reminders.filter(r=>!r.done&&r.date&&r.date<iso(today)).sort((a,b)=>a.date.localeCompare(b.date));overdueNow.forEach(r=>latest.push({kind:'task',title:'Overdue Reminder',desc:`${r.title} — tenggat ${r.date}.`,time:relTime(r.date),href:'reminder.html'}));const upcoming=reminders.filter(r=>!r.done&&r.date&&r.date>=iso(today)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);upcoming.forEach(r=>latest.push({kind:'task',title:'Upcoming Reminder',desc:`${r.title} — jadwal ${r.date}${r.time?' pukul '+r.time:''}.`,time:relTime(r.date),href:'reminder.html'}));list.innerHTML=latest.map(n=>`<a class="notification-item" href="#" data-notification-item><span class="notification-item-icon">${icon(n.kind)}</span><span><div class="notification-item-title">${escapeHtml(n.title)}</div><div class="notification-item-desc">${escapeHtml(n.desc)}</div><div class="notification-item-time">${escapeHtml(n.time)}</div></span></a>`).join('')||'<div class="notification-empty">Belum ada notifikasi.</div>';}
- list.addEventListener('click',e=>{const item=e.target.closest('[data-notification-item]');if(item){e.preventDefault();item.classList.add('is-read');}});
+ toggle.onclick=e=>{e.stopPropagation();pop.hidden=!pop.hidden;toggle.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden)renderItems();};
+ $('#notificationClose')?.addEventListener('click',()=>{pop.hidden=true;toggle.setAttribute('aria-expanded','false');});
+ list.addEventListener('click',e=>{const item=e.target.closest('[data-notification-item]');if(item&&item.getAttribute('href')==='#'){e.preventDefault();item.classList.add('is-read');}});
  document.addEventListener('click',e=>{if(!pop.contains(e.target)&&!toggle.contains(e.target)){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){pop.hidden=true;toggle.setAttribute('aria-expanded','false');}});
 }
-
 function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
 try{const savedTheme=localStorage.getItem(KEYS.theme);if(savedTheme==='dark'||savedTheme==='light'){document.documentElement.dataset.theme=savedTheme;document.body.dataset.theme=savedTheme;}}catch{}
