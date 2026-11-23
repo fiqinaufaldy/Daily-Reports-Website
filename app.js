@@ -410,7 +410,7 @@ function renderLeaveTracker(){
   </section>
   <div class="leave-modal-backdrop" id="leaveModal"><div class="leave-modal"><div class="leave-modal-head"><h2 id="leaveModalTitle">Add Leave</h2><button class="icon-btn" id="closeLeaveModal">×</button></div><p class="leave-modal-note">Day Payment uses FIFO automatically when marked as Used.</p><form id="leaveForm"><div class="leave-form-grid"><div><label>Date</label><input id="leaveDate" type="date" required></div><div><label>Type</label><select id="leaveType"><option value="DP">Day Payment</option><option>Annual Leave</option></select></div><div class="full"><label>Activity</label><input id="leaveActivityName" placeholder="Example: Event / Leave / Sick" required></div><div><label>Action</label><select id="leaveAction"><option value="Earned">Earned (+1)</option><option value="Used">Used (-1)</option></select></div></div><div class="leave-modal-actions"><button type="button" class="btn" id="cancelLeave">Cancel</button><button class="btn primary" type="submit">Save Leave</button></div></form></div></div>`;
 
-  const rows=$('#leaveRows');const renderRows=()=>{const filter=$('#leaveFilter').value;const sort=$('#leaveSort')?.value||'oldest';const list=[...data].filter(x=>filter==='All'||x.type===filter).sort((a,b)=>sort==='oldest'?a.date.localeCompare(b.date):b.date.localeCompare(a.date));rows.innerHTML=list.map(x=>`<tr><td>${fmtDate(x.date,{day:'2-digit',month:'short',year:'numeric'})}</td><td><span class="leave-type">${escapeHtml(x.type==='DP'?'Day Payment':x.type)}</span></td><td>${escapeHtml(x.activity)}</td><td><span class="leave-change ${x.action==='Earned'?'earned':'used'}">${x.change>0?'+1':'-1'}</span></td><td>${x.type==='DP'&&x.action==='Earned'?fmtDate(leaveDatePlusDays(x.date,60),{day:'2-digit',month:'short',year:'numeric'}):(x.reference?fmtDate(x.reference,{day:'2-digit',month:'short',year:'numeric'}):'—')}</td><td>${leaveStatusBlock(x.action)}</td><td><button class="btn small" data-edit-leave="${x.id}">Edit</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">No leave activity yet.</td></tr>';};
+  const rows=$('#leaveRows');const renderRows=()=>{const filter=$('#leaveFilter').value;const sort=$('#leaveSort')?.value||'oldest';const list=[...data].filter(x=>filter==='All'||x.type===filter).sort((a,b)=>sort==='oldest'?a.date.localeCompare(b.date):b.date.localeCompare(a.date));rows.innerHTML=list.map(x=>`<tr><td>${fmtDate(x.date,{day:'2-digit',month:'short',year:'numeric'})}</td><td><span class="leave-type">${escapeHtml(x.type==='DP'?'Day Payment':x.type)}</span></td><td>${escapeHtml(x.activity)}</td><td><span class="leave-change ${x.action==='Earned'?'earned':'used'}">${x.change>0?'+1':'-1'}</span></td><td>${x.type==='DP'&&x.action==='Earned'?fmtDate(leaveDatePlusDays(x.date,60),{day:'2-digit',month:'short',year:'numeric'}):(x.reference?fmtDate(x.reference,{day:'2-digit',month:'short',year:'numeric'}):'—')}</td><td><span class="leave-status ${x.action==='Earned'?'earned':'used'}">${x.action}</span></td><td><button class="btn small" data-edit-leave="${x.id}">Edit</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">No leave activity yet.</td></tr>';};
   const modal=$('#leaveModal');const openModal=id=>{const x=data.find(v=>v.id===id);$('#leaveModalTitle').textContent=id?'Edit Leave':'Add Leave';$('#leaveDate').value=x?.date||iso(today);$('#leaveType').value=x?.type||'DP';$('#leaveActivityName').value=x?.activity||'';$('#leaveAction').value=x?.action||'Earned';modal.dataset.editId=id||'';modal.classList.add('open');};const closeModal=()=>modal.classList.remove('open');
   $('#leaveActivityToggle').onclick=()=>$('#leaveActivity').classList.toggle('is-open');$('#addLeaveBtn').onclick=()=>openModal(null);$('#closeLeaveModal').onclick=closeModal;$('#cancelLeave').onclick=closeModal;modal.onclick=e=>{if(e.target===modal)closeModal()};$('#leaveFilter').onchange=renderRows;$('#leaveSort').onchange=renderRows;rows.onclick=e=>{const b=e.target.closest('[data-edit-leave]');if(b)openModal(b.dataset.editLeave);};
   $('#leaveForm').onsubmit=e=>{e.preventDefault();const id=modal.dataset.editId;const item={id:id||crypto.randomUUID(),date:$('#leaveDate').value,type:$('#leaveType').value,activity:$('#leaveActivityName').value.trim(),action:$('#leaveAction').value,change:$('#leaveAction').value==='Earned'?1:-1,reference:''};if(id){const i=data.findIndex(v=>v.id===id);if(i>=0)data[i]=item;}else data.push(item);saveLeaveData(data);closeModal();renderLeaveTracker();toast(id?'Leave updated.':'Leave added.');};renderRows();
@@ -775,7 +775,25 @@ function renderImportantData(){
  renderRows();
 }
 
-function renderPage(){const qp=new URLSearchParams(location.search);document.body.dataset.page=qp.get('page')==='leave-tracker'?'leave-tracker':'dashboard';applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,'leave-tracker':renderLeaveTracker,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,'important-data':renderImportantData,settings:renderSettings}[page]||renderDashboard)();}
+function renderPage(){
+ const qp=new URLSearchParams(location.search);
+ const requested=qp.get('page');
+ const path=(location.pathname||'').split('/').pop().toLowerCase();
+ const pageByPath={
+   'index.html':'dashboard',
+   'calendar.html':'calendar',
+   'daily-report.html':'daily-report',
+   'analytics.html':'analytics',
+   'reminder.html':'reminder',
+   'documents.html':'documents',
+   'important-data.html':'important-data',
+   'settings.html':'settings'
+ };
+ document.body.dataset.page=requested==='leave-tracker'?'leave-tracker':(pageByPath[path]||'dashboard');
+ applyCalendarColors();shell();initNotificationDropdown();
+ const page=document.body.dataset.page||'dashboard';
+ ({dashboard:renderDashboard,'leave-tracker':renderLeaveTracker,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,'important-data':renderImportantData,settings:renderSettings}[page]||renderDashboard)();
+}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
 try{const savedTheme=localStorage.getItem(KEYS.theme);if(savedTheme==='dark'||savedTheme==='light'){document.documentElement.dataset.theme=savedTheme;document.body.dataset.theme=savedTheme;}}catch{}
 document.addEventListener('DOMContentLoaded',()=>{renderPage();loadCreativeCalendarEvents();});
