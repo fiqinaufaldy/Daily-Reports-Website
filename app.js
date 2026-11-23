@@ -27,7 +27,7 @@ const ICONS = {
 };
 const icon = (name, cls='') => `<span class="svg-icon ${cls}">${ICONS[name]||''}</span>`;
 
-const KEYS = {activities:'dailyflow_activities_v1', reminders:'dailyflow_reminders_v1', notes:'dailyflow_notes_v1', units:'dailyflow_units_v1', theme:'dailyflow_theme_v1', profile:'dailyflow_profile_v1', unitBranding:'dailyflow_unit_branding_v1', workdays:'dailyflow_workday_status_v1', calendarColors:'dailyflow_calendar_colors_v1', importantData:'dailyflow_important_data_v1'};
+const KEYS = {activities:'dailyflow_activities_v1', reminders:'dailyflow_reminders_v1', notes:'dailyflow_notes_v1', units:'dailyflow_units_v1', theme:'dailyflow_theme_v1', profile:'dailyflow_profile_v1', unitBranding:'dailyflow_unit_branding_v1', workdays:'dailyflow_workday_status_v1', calendarColors:'dailyflow_calendar_colors_v1', importantData:'dailyflow_important_data_v1', leave:'dailyflow_leave_tracker_v1'};
 
 // Sinkronkan favicon tab browser dengan foto profil berbentuk lingkaran.
 function syncProfileFavicon() {
@@ -275,9 +275,10 @@ const save = () => {write(KEYS.activities,activities);write(KEYS.reminders,remin
 function applyTheme(theme){document.body.dataset.theme=theme;document.documentElement.dataset.theme=theme;const b=$('#themeToggle');if(b){b.innerHTML=icon(theme==='dark'?'light':'dark');b.title=theme==='dark'?'Aktifkan mode terang':'Aktifkan mode gelap';}try{localStorage.setItem(KEYS.theme,theme)}catch{}}
 function updateDateTime(){const dateText=$('#todayText');if(!dateText)return;const now=new Date();const date=new Intl.DateTimeFormat('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(now);const time=new Intl.DateTimeFormat('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);dateText.textContent=`${date} · ${time}`;}
 function shell(){
- const page=new URLSearchParams(location.search).get('view')||document.body.dataset.page||'dashboard';
- const links=[['dashboard','dashboard','Dashboard','index.html'],['calendar','calendar','Calendar','calendar.html'],['daily-report','report','Daily Report','daily-report.html'],['analytics','analytics','Analytics','analytics.html'],['reminder','reminder','Work Order & Reminder','reminder.html'],['documents','documents','Documents','documents.html'],['leave-tracker','calendar','Leave Tracker','index.html?view=leave-tracker'],['settings','settings','Settings','settings.html']];
- const nav=$('#sidebarNav'); if(nav){let moreOpen=page==='important-data';try{moreOpen=moreOpen||sessionStorage.getItem('dailyflow_more_open')==='1'}catch{};nav.innerHTML=links.map(([id,iconName,label,url])=>`<a href="${url}" class="${page===id?'active':''}"><span class="nav-icon">${icon(iconName)}</span>${label}</a>`).join('')+`<div class="nav-group more-nav-group"><button type="button" id="moreMenuToggle" class="more-nav-toggle ${moreOpen?'is-open':''}" aria-expanded="${moreOpen}"><span class="nav-icon">${icon('more')}</span><span class="more-nav-label">More</span><svg class="more-nav-chevron ${moreOpen?'is-open':''}" id="moreMenuChevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="moreMenuItems" class="more-nav-items" style="display:${moreOpen?'block':'none'}"><a href="important-data.html" class="more-nav-item ${page==='important-data'?'active':''}"><span class="nav-icon">${icon('link')}</span><span>Important Links</span></a></div></div>`;$('#moreMenuToggle')?.addEventListener('click',()=>{const items=$('#moreMenuItems'),btn=$('#moreMenuToggle'),chevron=$('#moreMenuChevron');const open=items?.style.display==='none';if(items)items.style.display=open?'block':'none';btn?.setAttribute('aria-expanded',String(open));btn?.classList.toggle('is-open',open);chevron?.classList.toggle('is-open',open);try{sessionStorage.setItem('dailyflow_more_open',open?'1':'0')}catch{}});if(!document.getElementById('more-nav-style')){const st=document.createElement('style');st.id='more-nav-style';st.textContent=`.more-nav-group{margin-top:8px;padding-top:2px}.more-nav-toggle{width:calc(100% - 10px);margin:0 5px;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid transparent;background:transparent;color:inherit;font:inherit;font-size:inherit;font-weight:600;padding:13px 13px;border-radius:12px;cursor:pointer;transition:background .18s,color .18s,border-color .18s;min-height:46px}.more-nav-toggle .nav-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;flex:0 0 20px}.more-nav-toggle .nav-icon svg{width:20px;height:20px}.more-nav-toggle.is-open{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.035);color:inherit}.more-nav-toggle:hover{background:rgba(255,255,255,.06)}.more-nav-label{flex:1}.more-nav-chevron{width:15px;height:15px;flex:0 0 15px;transition:transform .18s;transform:rotate(0deg);opacity:.8}.more-nav-chevron.is-open{transform:rotate(180deg)}.more-nav-items{position:relative;margin:8px 0 7px 17px;padding:0 0 0 14px;border-left:1px solid rgba(160,190,169,.28)}.more-nav-item{display:flex!important;align-items:center;gap:10px;margin:4px 0;padding:12px 12px!important;border-radius:11px!important;text-decoration:none;min-height:44px;transition:background .18s,color .18s}.more-nav-item .nav-icon{display:inline-flex;align-items:center;justify-content:center;width:17px;flex:0 0 17px;opacity:.92}.more-nav-item .nav-icon svg{width:17px;height:17px;display:block;color:currentColor;stroke:currentColor}.more-nav-item .nav-icon svg [fill="currentColor"]{fill:currentColor}.more-nav-item.active{background:rgba(80,145,104,.24)!important;color:#8ED9B1!important;box-shadow:inset 0 0 0 1px rgba(115,190,143,.06)}.more-nav-item.active .nav-icon{color:#8ED9B1}.more-nav-item:not(.active):hover{background:rgba(255,255,255,.055);color:#e7f2eb!important}.more-nav-toggle:focus-visible,.more-nav-item:focus-visible{outline:2px solid #6bbd94;outline-offset:2px}@media(max-width:900px){.more-nav-toggle{padding:12px 11px}.more-nav-items{margin-left:13px;padding-left:11px}.more-nav-item{padding:11px 10px!important}}`;document.head.appendChild(st);}}
+ const page=document.body.dataset.page||'dashboard';
+ const leaveTracker=location.hash==='#leave-tracker';
+ const links=[['dashboard','dashboard','Dashboard','index.html'],['calendar','calendar','Calendar','calendar.html'],['daily-report','report','Daily Report','daily-report.html'],['analytics','analytics','Analytics','analytics.html'],['leave-tracker','calendar','Leave Tracker','index.html#leave-tracker'],['reminder','reminder','Work Order & Reminder','reminder.html'],['documents','documents','Documents','documents.html'],['settings','settings','Settings','settings.html']];
+ const nav=$('#sidebarNav'); if(nav){let moreOpen=page==='important-data';try{moreOpen=moreOpen||sessionStorage.getItem('dailyflow_more_open')==='1'}catch{};nav.innerHTML=links.map(([id,iconName,label,url])=>`<a href="${url}" class="${(page===id || (id==='leave-tracker'&&leaveTracker))?'active':''}"><span class="nav-icon">${icon(iconName)}</span>${label}</a>`).join('')+`<div class="nav-group more-nav-group"><button type="button" id="moreMenuToggle" class="more-nav-toggle ${moreOpen?'is-open':''}" aria-expanded="${moreOpen}"><span class="nav-icon">${icon('more')}</span><span class="more-nav-label">More</span><svg class="more-nav-chevron ${moreOpen?'is-open':''}" id="moreMenuChevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="moreMenuItems" class="more-nav-items" style="display:${moreOpen?'block':'none'}"><a href="important-data.html" class="more-nav-item ${page==='important-data'?'active':''}"><span class="nav-icon">${icon('link')}</span><span>Important Links</span></a></div></div>`;$('#moreMenuToggle')?.addEventListener('click',()=>{const items=$('#moreMenuItems'),btn=$('#moreMenuToggle'),chevron=$('#moreMenuChevron');const open=items?.style.display==='none';if(items)items.style.display=open?'block':'none';btn?.setAttribute('aria-expanded',String(open));btn?.classList.toggle('is-open',open);chevron?.classList.toggle('is-open',open);try{sessionStorage.setItem('dailyflow_more_open',open?'1':'0')}catch{}});if(!document.getElementById('more-nav-style')){const st=document.createElement('style');st.id='more-nav-style';st.textContent=`.more-nav-group{margin-top:8px;padding-top:2px}.more-nav-toggle{width:calc(100% - 10px);margin:0 5px;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid transparent;background:transparent;color:inherit;font:inherit;font-size:inherit;font-weight:600;padding:13px 13px;border-radius:12px;cursor:pointer;transition:background .18s,color .18s,border-color .18s;min-height:46px}.more-nav-toggle .nav-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;flex:0 0 20px}.more-nav-toggle .nav-icon svg{width:20px;height:20px}.more-nav-toggle.is-open{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.035);color:inherit}.more-nav-toggle:hover{background:rgba(255,255,255,.06)}.more-nav-label{flex:1}.more-nav-chevron{width:15px;height:15px;flex:0 0 15px;transition:transform .18s;transform:rotate(0deg);opacity:.8}.more-nav-chevron.is-open{transform:rotate(180deg)}.more-nav-items{position:relative;margin:8px 0 7px 17px;padding:0 0 0 14px;border-left:1px solid rgba(160,190,169,.28)}.more-nav-item{display:flex!important;align-items:center;gap:10px;margin:4px 0;padding:12px 12px!important;border-radius:11px!important;text-decoration:none;min-height:44px;transition:background .18s,color .18s}.more-nav-item .nav-icon{display:inline-flex;align-items:center;justify-content:center;width:17px;flex:0 0 17px;opacity:.92}.more-nav-item .nav-icon svg{width:17px;height:17px;display:block;color:currentColor;stroke:currentColor}.more-nav-item .nav-icon svg [fill="currentColor"]{fill:currentColor}.more-nav-item.active{background:rgba(80,145,104,.24)!important;color:#8ED9B1!important;box-shadow:inset 0 0 0 1px rgba(115,190,143,.06)}.more-nav-item.active .nav-icon{color:#8ED9B1}.more-nav-item:not(.active):hover{background:rgba(255,255,255,.055);color:#e7f2eb!important}.more-nav-toggle:focus-visible,.more-nav-item:focus-visible{outline:2px solid #6bbd94;outline-offset:2px}@media(max-width:900px){.more-nav-toggle{padding:12px 11px}.more-nav-items{margin-left:13px;padding-left:11px}.more-nav-item{padding:11px 10px!important}}`;document.head.appendChild(st);}}
  updateDateTime(); if(!window.__dailyFlowClock){window.__dailyFlowClock=setInterval(updateDateTime,1000);}
  const greeting=$('#greeting');if(greeting){const h=new Date().getHours();greeting.textContent=(h<11?'Good Morning':h<15?'Good Afternoon':h<18?'Good Evening':'Good Night')+', '+(profile.name||'DailyFlow')+' ';const wave=document.createElement('span');wave.className='wave-hand';wave.textContent='👋';wave.setAttribute('aria-label','Waving hand');greeting.appendChild(wave);}
  const profileEl=$('.sidebar .profile');if(profileEl){profileEl.innerHTML=`${profile.photo?`<img class="profile-photo" src="${profile.photo}" alt="Foto profil">`:`<div class="avatar">${escapeHtml((profile.name||'DF').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase())}</div>`}<div class="profile-copy"><strong>${escapeHtml(profile.name||'Nama Pengguna')}</strong><small>${escapeHtml(profile.role||'Tambahkan jabatan di Settings')}</small></div>`;}
@@ -669,269 +670,105 @@ function renderImportantData(){
 }
 
 
-const LEAVE_TRACKER_KEY = 'dailyflow_leave_tracker_v1';
-const leaveInitialTransactions = [
-  {id:'dp-20260726',date:'2026-07-26',type:'DP',activity:'18 Hole',change:1},
-  {id:'dp-20260810',date:'2026-08-10',type:'DP',activity:'DP',change:-1},
-  {id:'dp-20260817',date:'2026-08-17',type:'DP',activity:'Upacara F9, Warrior Golf Balls',change:1},
-  {id:'dp-20260823',date:'2026-08-23',type:'DP',activity:'Slow Sunday Vol. 1',change:1},
-  {id:'dp-20260911',date:'2026-09-11',type:'DP',activity:'Sakit DP',change:-1},
-  {id:'dp-20260912',date:'2026-09-12',type:'DP',activity:'Donor Darah',change:1},
-  {id:'dp-20260926',date:'2026-09-26',type:'DP',activity:'Oktober Fest',change:1},
-  {id:'dp-20261005',date:'2026-10-05',type:'DP',activity:'DP Survey Venue',change:-1},
-  {id:'dp-20261010',date:'2026-10-10',type:'DP',activity:'Anniv BDG',change:1},
-  {id:'dp-20261025',date:'2026-10-25',type:'DP',activity:'Slow Sunday Vol. 3',change:1},
-  {id:'dp-20261026',date:'2026-10-26',type:'DP',activity:'DP',change:-1},
-  {id:'dp-20261122',date:'2026-11-22',type:'DP',activity:'Slow Sunday Vol. 4',change:1}
-];
 
-function leaveGetTransactions(){
-  try{
-    const raw=localStorage.getItem(LEAVE_TRACKER_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch{}
-  try{localStorage.setItem(LEAVE_TRACKER_KEY,JSON.stringify(leaveInitialTransactions));}catch{}
-  return leaveInitialTransactions.map(x=>({...x}));
+/* =========================
+   LEAVE TRACKER
+========================= */
+const LEAVE_DEFAULTS = [
+  {id:'dp-2026-07-26', date:'2026-07-26', type:'DP', activity:'18 Hole', action:'earned'},
+  {id:'dp-2026-08-10', date:'2026-08-10', type:'DP', activity:'DP', action:'used', reference:'dp-2026-07-26'},
+  {id:'dp-2026-08-17', date:'2026-08-17', type:'DP', activity:'Upacara F9, Warrior Golf Balls', action:'earned'},
+  {id:'dp-2026-08-23', date:'2026-08-23', type:'DP', activity:'Slow Sunday Vol. 1', action:'earned'},
+  {id:'dp-2026-09-11', date:'2026-09-11', type:'DP', activity:'Sakit DP', action:'used', reference:'dp-2026-08-17'},
+  {id:'dp-2026-09-12', date:'2026-09-12', type:'DP', activity:'Donor Darah', action:'earned'},
+  {id:'dp-2026-09-26', date:'2026-09-26', type:'DP', activity:'Oktober Fest', action:'earned'},
+  {id:'dp-2026-10-05', date:'2026-10-05', type:'DP', activity:'DP Survey Venue', action:'used', reference:'dp-2026-08-23'},
+  {id:'dp-2026-10-10', date:'2026-10-10', type:'DP', activity:'Anniv BDG', action:'earned'},
+  {id:'dp-2026-10-25', date:'2026-10-25', type:'DP', activity:'Slow Sunday Vol. 3', action:'earned'},
+  {id:'dp-2026-10-26', date:'2026-10-26', type:'DP', activity:'DP', action:'used', reference:'dp-2026-09-12'},
+  {id:'dp-2026-11-22', date:'2026-11-22', type:'DP', activity:'Slow Sunday Vol. 4', action:'earned'}
+];
+function leaveRead(){
+  const raw=read(KEYS.leave,null);
+  if(Array.isArray(raw)&&raw.length)return raw;
+  write(KEYS.leave,LEAVE_DEFAULTS);
+  return LEAVE_DEFAULTS.map(x=>({...x}));
 }
-function leaveSaveTransactions(items){
-  try{localStorage.setItem(LEAVE_TRACKER_KEY,JSON.stringify(items));return true;}catch{return false;}
-}
-function leaveDaysBetween(a,b){
-  return Math.floor((parseDate(b)-parseDate(a))/86400000);
-}
-function leaveExpiry(date){const d=parseDate(date);if(!d)return null;d.setDate(d.getDate()+60);return iso(d);}
-function leaveBuildDPState(transactions){
-  const queue=[];
-  const rows=[];
-  const sorted=[...transactions].sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));
-  const nowIso=iso(new Date());
-  sorted.forEach(tx=>{
-    if(tx.type!=='DP'){rows.push({...tx,status:'Recorded'});return;}
-    if(tx.change>0){
-      queue.push({id:tx.id,date:tx.date,expiry:leaveExpiry(tx.date),used:false});
-      rows.push({...tx,status:'Earned',expiry:leaveExpiry(tx.date)});
-    }else{
-      // FIFO: consume the oldest still-valid earned DP.
-      let idx=queue.findIndex(item=>!item.used && item.expiry>=tx.date);
-      if(idx>=0){
-        queue[idx].used=true;
-        rows.push({...tx,status:'Used',usedFrom:queue[idx].date});
-      }else{
-        rows.push({...tx,status:'Used',usedFrom:null});
-      }
+function leaveWrite(data){write(KEYS.leave,data);}
+function leaveDatePlus60(date){const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+60);return iso(d);}
+function leaveDaysLeft(expiry){const todayKey=iso(new Date());const a=new Date(todayKey+'T12:00:00');const b=new Date(expiry+'T12:00:00');return Math.ceil((b-a)/86400000);}
+function leaveFmt(date){return fmtDate(date,{day:'2-digit',month:'short',year:'numeric'}).replace(/\./g,'');}
+function leaveData(){
+  let data=leaveRead().map(x=>({...x})).sort((a,b)=>a.date.localeCompare(b.date));
+  const active=[];
+  data.forEach(item=>{
+    if(item.type!=='DP'){return;}
+    if(item.action==='earned'){
+      item.expiry=leaveDatePlus60(item.date);
+      if(leaveDaysLeft(item.expiry)>=0) active.push(item);
+    } else {
+      const target=active.find(x=>x.id===item.reference) || active.shift();
+      item.reference=target?.id||item.reference||'';
+      if(target) target.usedBy=item.id;
     }
   });
-  const active=queue.filter(x=>!x.used && x.expiry>=nowIso).sort((a,b)=>a.date.localeCompare(b.date));
-  const expired=queue.filter(x=>!x.used && x.expiry<nowIso).sort((a,b)=>a.date.localeCompare(b.date));
-  return {rows,active,expired};
+  return {data,active};
 }
-function leaveStatusBlock(change,status){
-  const isEarned=status==='Earned';
-  const bg=isEarned?'#e1f4ec':'#ffebed';
-  const fg=isEarned?'#208566':'#dc5a63';
-  const label=isEarned?`+${Math.abs(change)}`:`-${Math.abs(change)}`;
-  return `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:4px 9px;border-radius:8px;background:${bg};color:${fg};font-size:10px;font-weight:800">${label}</span>`;
-}
-function leaveDaysLeft(expiry){
-  const todayIso=iso(new Date());
-  return Math.max(0,leaveDaysBetween(todayIso,expiry));
+function leaveInjectStyles(){
+ if(document.getElementById('leave-tracker-styles'))return;
+ const st=document.createElement('style');st.id='leave-tracker-styles';st.textContent=`
+ .leave-hero{position:relative;overflow:hidden;margin-bottom:14px;padding:20px 22px;border:1px solid color-mix(in srgb,var(--green) 16%,var(--line));border-radius:18px;background:linear-gradient(112deg,var(--surface) 0%,var(--surface) 64%,var(--green-2) 150%)}
+ .leave-hero:after{content:"";position:absolute;right:-50px;top:-90px;width:210px;height:210px;border:1px solid color-mix(in srgb,var(--green) 18%,transparent);border-radius:50%;box-shadow:0 0 0 22px color-mix(in srgb,var(--green) 4%,transparent),0 0 0 46px color-mix(in srgb,var(--green) 3%,transparent);pointer-events:none}
+ .leave-hero h1{margin:0 0 4px;font:800 23px/1.2 Manrope,sans-serif;letter-spacing:-.05em}.leave-hero p{margin:0;color:var(--muted);font-size:11px;position:relative;z-index:1}
+ .leave-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}.leave-card{position:relative;min-height:110px;padding:17px;border:1px solid var(--line);border-radius:17px;background:var(--surface);overflow:hidden}.leave-card:after{content:"";position:absolute;right:-28px;bottom:-36px;width:90px;height:90px;border-radius:50%;background:color-mix(in srgb,var(--green) 9%,transparent)}.leave-card .kicker{font-size:10px;color:var(--muted);font-weight:800}.leave-card .value{font:800 28px/1 Manrope,sans-serif;margin:12px 0 5px;letter-spacing:-.04em}.leave-card small{font-size:10px;color:var(--muted)}
+ .leave-overview{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,.95fr) minmax(0,.95fr);gap:12px;margin-bottom:14px}.leave-panel{border:1px solid var(--line);border-radius:17px;background:var(--surface);padding:17px}.leave-panel h2{margin:0;font:800 16px Manrope,sans-serif}.leave-panel p{margin:3px 0 0;color:var(--muted);font-size:10px}.leave-dp{border-color:color-mix(in srgb,var(--green) 70%,var(--line));background:linear-gradient(140deg,color-mix(in srgb,var(--green-2) 42%,var(--surface)) 0%,var(--surface) 68%)}.leave-dp-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.leave-status{padding:6px 9px;border-radius:8px;background:var(--green-2);color:var(--green);font-size:9px;font-weight:800}.leave-big{font:800 31px/1 Manrope,sans-serif;margin:16px 0 4px}.leave-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}.leave-break{border-radius:11px;padding:11px;background:var(--surface-2)}.leave-break.earned{background:color-mix(in srgb,#22c55e 15%,var(--surface-2));border:1px solid color-mix(in srgb,#22c55e 20%,transparent)}.leave-break.used{background:color-mix(in srgb,#ef4444 13%,var(--surface-2));border:1px solid color-mix(in srgb,#ef4444 20%,transparent)}.leave-break b{display:block;font-size:10px}.leave-break strong{display:block;font:800 18px Manrope;margin-top:4px}.leave-break.earned strong{color:#57d98b}.leave-break.used strong{color:#f28b8b}
+ .leave-expiry-list{display:grid;gap:8px;margin-top:13px}.leave-expiry{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}.leave-expiry strong{font-size:10px}.leave-expiry small{display:block;color:var(--muted);font-size:9px;margin-top:3px}.days-left{padding:6px 8px;border-radius:8px;background:var(--green-2);color:var(--green);font-size:9px;font-weight:800;white-space:nowrap}.days-left.urgent{background:color-mix(in srgb,#ef4444 15%,var(--surface-2));color:#f28b8b}
+ .leave-activity{border:1px solid var(--line);border-radius:17px;background:var(--surface);overflow:hidden}.leave-activity-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 17px;cursor:pointer}.leave-activity-title{display:flex;align-items:center;gap:10px}.leave-activity-icon{width:32px;height:32px;border-radius:9px;background:var(--green-2);color:var(--green);display:grid;place-items:center}.leave-activity-title h2{margin:0;font:800 16px Manrope,sans-serif}.leave-activity-title p{margin:3px 0 0;color:var(--muted);font-size:10px}.leave-head-actions{display:flex;align-items:center;gap:7px}.leave-count{padding:7px 9px;border-radius:9px;background:var(--surface-2);font-size:9px;color:var(--muted);font-weight:800}.leave-chevron{font-size:16px;color:var(--muted);transition:transform .18s}.leave-chevron.open{transform:rotate(180deg)}.leave-activity-body{display:none;padding:0 16px 16px}.leave-activity.open .leave-activity-body{display:block}.leave-activity.open .leave-activity-head{border-bottom:1px solid var(--line)}.leave-tools{display:flex;justify-content:flex-end;gap:8px;padding:13px 0 10px}.leave-tools select{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--ink);font-size:10px}.leave-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}.leave-table{width:100%;border-collapse:collapse;min-width:820px}.leave-table th,.leave-table td{padding:11px 12px;border-bottom:1px solid var(--line);font-size:10px;text-align:left;white-space:nowrap}.leave-table th{font-size:9px;color:var(--muted);background:var(--surface-2);text-transform:uppercase;letter-spacing:.3px}.leave-table tr:last-child td{border-bottom:0}.leave-pill{display:inline-flex;align-items:center;padding:4px 8px;border-radius:7px;font-size:9px;font-weight:800}.leave-pill.dp{background:var(--blue-2);color:var(--blue)}.leave-change{display:inline-flex;align-items:center;justify-content:center;min-width:35px;padding:5px 8px;border-radius:7px;font-weight:900}.leave-change.earned{background:color-mix(in srgb,#22c55e 16%,var(--surface-2));color:#57d98b}.leave-change.used{background:color-mix(in srgb,#ef4444 15%,var(--surface-2));color:#f28b8b}.leave-status-pill{display:inline-flex;padding:5px 8px;border-radius:7px;font-size:9px;font-weight:800}.leave-status-pill.earned{background:color-mix(in srgb,#22c55e 16%,var(--surface-2));color:#57d98b}.leave-status-pill.used{background:color-mix(in srgb,#ef4444 15%,var(--surface-2));color:#f28b8b}.leave-action{display:flex;gap:5px}.leave-modal-backdrop{position:fixed;inset:0;background:#07110bc8;z-index:50;display:none;align-items:center;justify-content:center;padding:18px}.leave-modal-backdrop.open{display:flex}.leave-modal{width:min(560px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 25px 80px #0005}.leave-modal .modal-title{margin-bottom:15px}.leave-modal .field input,.leave-modal .field select{font-size:11px}.leave-modal-close{border:0;background:transparent;color:var(--muted);font-size:22px;cursor:pointer}.leave-add-btn{border:0;background:var(--green);color:white;border-radius:10px;padding:9px 12px;font:800 10px DM Sans,sans-serif;cursor:pointer}.leave-add-btn:hover{filter:brightness(1.05)}
+ @media(max-width:1000px){.leave-overview{grid-template-columns:1fr 1fr}.leave-overview .leave-panel:last-child{grid-column:1/-1}.leave-summary{grid-template-columns:1fr 1fr}}@media(max-width:760px){.leave-summary,.leave-overview{grid-template-columns:1fr}.leave-overview .leave-panel:last-child{grid-column:auto}.leave-breakdown{grid-template-columns:1fr 1fr}.leave-activity-head{padding:13px}.leave-activity-body{padding:0 12px 12px}}
+ `;document.head.appendChild(st);
 }
 function renderLeaveTracker(){
-  const root=$('#pageContent'); if(!root)return;
-  const intro=document.querySelector('.page-intro');
-  if(intro) intro.innerHTML=`<h1>Leave Tracker</h1><p>Track your leave balance, usage, FIFO, and expiry.</p>`;
-
-  const transactions=leaveGetTransactions();
-  const state=leaveBuildDPState(transactions);
-  const active=state.active;
-  const used=transactions.filter(x=>x.type==='DP'&&x.change<0).length;
-  const earned=transactions.filter(x=>x.type==='DP'&&x.change>0).length;
-  const upcoming=active.slice(0,3).map(item=>`
-    <div class="leave-expiry-row">
-      <div><strong>${escapeHtml(fmtDate(item.date,{day:'2-digit',month:'short',year:'numeric'}))} · DP</strong>
-      <div class="muted">Expires ${escapeHtml(fmtDate(item.expiry,{day:'2-digit',month:'short',year:'numeric'}))}</div></div>
-      <span class="leave-days ${leaveDaysLeft(item.expiry)<=7?'urgent':''}">${leaveDaysLeft(item.expiry)} days left</span>
-    </div>`).join('') || `<div class="empty">Tidak ada DP aktif.</div>`;
-
-  const history=[...state.rows].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>`
-    <tr>
-      <td>${fmtDate(r.date,{day:'2-digit',month:'short',year:'numeric'})}</td>
-      <td><span class="tag blue">${escapeHtml(r.type||'DP')}</span></td>
-      <td>${escapeHtml(r.activity||'')}</td>
-      <td>${leaveStatusBlock(r.change,r.status)}</td>
-      <td>${r.status==='Earned' ? (r.expiry ? fmtDate(r.expiry,{day:'2-digit',month:'short',year:'numeric'}) : '—') : (r.usedFrom ? fmtDate(r.usedFrom,{day:'2-digit',month:'short',year:'numeric'}) : '—')}</td>
-      <td><span class="tag ${r.status==='Earned'?'done':'pending'}">${r.status}</span></td>
-      <td class="leave-actions-cell"><button type="button" class="leave-edit-btn" data-leave-edit="${escapeHtml(r.id)}">Edit</button></td>
-    </tr>`).join('');
-
-  root.innerHTML=`
-<style id="leave-tracker-inline-style">
-.leave-expiry-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);margin-bottom:8px}
-.leave-expiry-row strong{font-size:11px}.leave-expiry-row .muted{font-size:10px;margin-top:2px}.leave-days{font-size:10px;font-weight:800;color:var(--green)}.leave-days.urgent{color:var(--red)}
-.leave-overview-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(280px,.95fr);gap:16px}
-.leave-dp-card{border:1px solid var(--green);border-radius:15px;padding:16px;background:linear-gradient(135deg,var(--surface),var(--green-2))}
-.leave-dp-card .leave-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.leave-split-box{border-radius:12px;padding:12px 14px}.leave-split-box.earned{background:rgba(32,134,101,.22);border:1px solid rgba(74,210,137,.18)}.leave-split-box.used{background:rgba(196,72,80,.22);border:1px solid rgba(220,90,99,.18)}
-.leave-split-box .label{font-size:10px;color:var(--muted)}.leave-split-box strong{display:block;font-size:17px;margin-top:3px}
-.leave-activity-panel{overflow:hidden}.leave-activity-head{cursor:pointer;user-select:none}.leave-activity-head:hover{border-color:var(--green)}
-.leave-activity-chevron{transition:transform .18s ease}.leave-activity-panel.collapsed .leave-activity-chevron{transform:rotate(-90deg)}
-.leave-activity-panel.collapsed .leave-activity-body{display:none}
-.leave-activity-meta{display:flex;align-items:center;gap:8px}
-.leave-activity-body{padding-top:4px}
-.leave-table-actions{display:flex;align-items:center;gap:8px}
-.leave-edit-btn{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:8px;padding:5px 9px;font-size:10px;font-weight:800;cursor:pointer}.leave-edit-btn:hover{border-color:var(--green);color:var(--green)}
-.leave-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:12000}
-.leave-modal{width:min(520px,100%);background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.35);padding:20px}
-.leave-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.leave-modal-head h3{margin:0;font-size:17px}.leave-modal-head p{margin:5px 0 0;color:var(--muted);font-size:11px}.leave-modal-close{border:0;background:transparent;color:var(--muted);font-size:24px;cursor:pointer}
-.leave-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.leave-form .full{grid-column:1/-1}.leave-form label{display:block;font-size:10px;color:var(--muted);margin-bottom:6px}.leave-form input,.leave-form select{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);font:inherit;font-size:12px}
-.leave-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.leave-form-actions button{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:9px 14px;cursor:pointer;font:inherit;font-size:11px;font-weight:800}.leave-form-actions .primary{background:var(--green);border-color:var(--green);color:#07110b}
-@media(max-width:1000px){.leave-overview-grid{grid-template-columns:1fr 1fr}.leave-overview-grid> :last-child{grid-column:1/-1}}
-@media(max-width:700px){.leave-overview-grid{grid-template-columns:1fr}.leave-overview-grid> :last-child{grid-column:auto}.leave-dp-card .leave-split{grid-template-columns:1fr}.leave-form{grid-template-columns:1fr}.leave-form .full{grid-column:auto}.leave-activity-meta .tag{display:none}}
-</style>
-
-<div class="grid stats">
-  <div class="stat"><div class="stat-top">Available Leave <span class="stat-icon">${icon('calendar')}</span></div><strong>${active.length} days</strong><small>Current active leave balance</small></div>
-  <div class="stat"><div class="stat-top">DP <span class="stat-icon">${icon('calendar')}</span></div><strong>+${active.length} days</strong><small>${earned} earned · ${used} used</small></div>
-  <div class="stat"><div class="stat-top">Annual Leave 2026 <span class="stat-icon">${icon('calendar')}</span></div><strong>0 days</strong><small>Current year</small></div>
-  <div class="stat"><div class="stat-top">Annual Leave 2027 <span class="stat-icon">${icon('calendar')}</span></div><strong>0 days</strong><small>Ready to configure</small></div>
-</div>
-
-<section class="panel" style="margin-bottom:14px">
-  <div class="panel-head"><div><h2>Leave Overview</h2><p>Saldo leave dan aturan yang sedang berlaku.</p></div></div>
-  <div class="leave-overview-grid">
-    <div class="leave-dp-card">
-      <div style="display:flex;justify-content:space-between;gap:10px">
-        <div><strong style="font-size:14px">DP</strong><div style="font-size:10px;color:var(--muted)">FIFO · expires in 60 days</div></div>
-        <span class="tag done">Active</span>
-      </div>
-      <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">${active.length} days</strong>
-      <div style="font-size:10px;color:var(--muted)">available</div>
-      <div class="leave-split">
-        <div class="leave-split-box earned"><div class="label">Earned</div><strong>${earned} days</strong></div>
-        <div class="leave-split-box used"><div class="label">Used</div><strong>${used} days</strong></div>
-      </div>
-    </div>
-    <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
-      <div style="display:flex;justify-content:space-between;gap:10px"><div><strong style="font-size:14px">Annual Leave 2027</strong><div style="font-size:10px;color:var(--muted)">Annual entitlement</div></div><span class="tag">Not configured</span></div>
-      <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">0 days</strong>
-      <div style="font-size:10px;color:var(--muted)">available</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px">
-        <div style="border-radius:12px;padding:12px;background:var(--surface-2)"><div style="font-size:10px;color:var(--muted)">Entitlement</div><strong>0 days</strong></div>
-        <div style="border-radius:12px;padding:12px;background:var(--surface-2)"><div style="font-size:10px;color:var(--muted)">Used</div><strong>0 days</strong></div>
-      </div>
-    </div>
-    <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
-      <div><strong style="font-size:14px">Upcoming Expiry</strong><div style="font-size:10px;color:var(--muted)">DP that will expire soon.</div></div>
-      <div style="margin-top:12px">${upcoming}</div>
-    </div>
-  </div>
-</section>
-
-<section class="panel leave-activity-panel" id="leaveActivityPanel">
-  <div class="panel-head leave-activity-head" id="leaveActivityToggle" role="button" tabindex="0" aria-expanded="true">
-    <div><h2>Leave Activity</h2><p>History of earned and used leave. Earned is green, used is red.</p></div>
-    <div class="leave-activity-meta"><span class="tag">FIFO · 60 Days</span><span class="tag">${transactions.length} records</span><span class="leave-activity-chevron">⌄</span></div>
-  </div>
-  <div class="leave-activity-body">
-    <div class="panel-head" style="padding-top:0">
-      <div></div>
-      <div class="leave-table-actions">
-        <select id="leaveFilter" style="border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:8px 10px;font-size:11px">
-          <option value="ALL">All Leave Types</option><option value="DP">DP</option><option value="ANNUAL">Annual Leave</option>
-        </select>
-        <button type="button" class="btn primary" id="leaveAddBtn">＋ Add Leave</button>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table" style="min-width:900px">
-        <thead><tr><th>Date</th><th>Type</th><th>Activity</th><th>Change</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody id="leaveHistoryBody">${history}</tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<div id="leaveModal" class="leave-modal-backdrop" hidden>
-  <div class="leave-modal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle">
-    <div class="leave-modal-head"><div><h3 id="leaveModalTitle">Add Leave</h3><p>DP uses FIFO automatically when marked as Used.</p></div><button type="button" class="leave-modal-close" id="leaveModalClose">×</button></div>
-    <form id="leaveForm">
-      <div class="leave-form">
-        <div><label for="leaveDate">Date</label><input id="leaveDate" type="date" required></div>
-        <div><label for="leaveType">Type</label><select id="leaveType"><option value="DP">DP</option><option value="ANNUAL">Annual Leave</option></select></div>
-        <div class="full"><label for="leaveActivity">Activity</label><input id="leaveActivity" placeholder="Contoh: Event / Cuti / Sakit" required></div>
-        <div><label for="leaveAction">Action</label><select id="leaveAction"><option value="earned">Earned (+1)</option><option value="used">Used (-1)</option></select></div>
-        <div><label for="leaveId">ID</label><input id="leaveId" type="text" readonly placeholder="Auto generated"></div>
-      </div>
-      <div class="leave-form-actions"><button type="button" id="leaveCancelBtn">Cancel</button><button type="submit" class="primary">Save Leave</button></div>
-    </form>
-  </div>
-</div>`;
-
-  const panel=$('#leaveActivityPanel');
-  const toggle=()=>{
-    const collapsed=panel.classList.toggle('collapsed');
-    $('#leaveActivityToggle')?.setAttribute('aria-expanded',String(!collapsed));
-    try{localStorage.setItem('dailyflow_leave_activity_collapsed_v1',collapsed?'1':'0')}catch{}
-  };
-  const savedCollapsed=localStorage.getItem('dailyflow_leave_activity_collapsed_v1')==='1';
-  if(savedCollapsed) panel.classList.add('collapsed');
-  $('#leaveActivityToggle')?.addEventListener('click',toggle);
-  $('#leaveActivityToggle')?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
-
-  const openModal=(item=null)=>{
-    $('#leaveModal').hidden=false;
-    $('#leaveModalTitle').textContent=item?'Edit Leave':'Add Leave';
-    $('#leaveDate').value=item?.date||iso(new Date());
-    $('#leaveType').value=item?.type||'DP';
-    $('#leaveActivity').value=item?.activity||'';
-    $('#leaveAction').value=(item?.change||1)>0?'earned':'used';
-    $('#leaveId').value=item?.id||'';
-  };
-  const closeModal=()=>{$('#leaveModal').hidden=true;};
-  $('#leaveAddBtn')?.addEventListener('click',()=>openModal());
-  $('#leaveModalClose')?.addEventListener('click',closeModal);
-  $('#leaveCancelBtn')?.addEventListener('click',closeModal);
-  $('#leaveModal')?.addEventListener('click',e=>{if(e.target.id==='leaveModal')closeModal();});
-
-  $('#leaveForm')?.addEventListener('submit',e=>{
-    e.preventDefault();
-    const date=$('#leaveDate').value, type=$('#leaveType').value, activity=$('#leaveActivity').value.trim(), action=$('#leaveAction').value, id=$('#leaveId').value;
-    if(!date||!activity){toast('Date dan activity wajib diisi.');return;}
-    const change=action==='used'?-1:1;
-    let items=leaveGetTransactions();
-    const item={id:id||`leave-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,date,type,activity,change};
-    if(id) items=items.map(x=>x.id===id?item:x); else items.push(item);
-    if(leaveSaveTransactions(items)){closeModal();renderLeaveTracker();toast(id?'Leave updated.':'Leave added.');}
-    else toast('Leave belum tersimpan karena storage browser penuh.');
-  });
-
-  $('#leaveHistoryBody')?.addEventListener('click',e=>{
-    const btn=e.target.closest('[data-leave-edit]');
-    if(!btn)return;
-    const item=leaveGetTransactions().find(x=>String(x.id)===String(btn.dataset.leaveEdit));
-    if(item)openModal(item);
-  });
-
-  $('#leaveFilter')?.addEventListener('change',()=>{
-    const filter=$('#leaveFilter').value;
-    const filtered=state.rows.filter(r=>filter==='ALL'||r.type===filter).sort((a,b)=>b.date.localeCompare(a.date));
-    $('#leaveHistoryBody').innerHTML=filtered.map(r=>`
-      <tr>
-        <td>${fmtDate(r.date,{day:'2-digit',month:'short',year:'numeric'})}</td>
-        <td><span class="tag blue">${escapeHtml(r.type||'DP')}</span></td>
-        <td>${escapeHtml(r.activity||'')}</td>
-        <td>${leaveStatusBlock(r.change,r.status)}</td>
-        <td>${r.status==='Earned' ? (r.expiry ? fmtDate(r.expiry,{day:'2-digit',month:'short',year:'numeric'}) : '—') : (r.usedFrom ? fmtDate(r.usedFrom,{day:'2-digit',month:'short',year:'numeric'}) : '—')}</td>
-        <td><span class="tag ${r.status==='Earned'?'done':'pending'}">${r.status}</span></td>
-        <td class="leave-actions-cell"><button type="button" class="leave-edit-btn" data-leave-edit="${escapeHtml(r.id)}">Edit</button></td>
-      </tr>`).join('');
-  });
+ const root=$('#pageContent'); if(!root)return; leaveInjectStyles();
+ const intro=$('.page-intro'); if(intro){intro.innerHTML='<div class="leave-hero"><h1>Leave Tracker</h1><p>Track your leave balance, usage, FIFO, and expiry.</p></div>';intro.style.display='none';}
+ const {data,active}=leaveData(); const dpEarned=data.filter(x=>x.type==='DP'&&x.action==='earned').length; const dpUsed=data.filter(x=>x.type==='DP'&&x.action==='used').length; const dpAvailable=active.length;
+ const annual2027=data.filter(x=>x.type==='Annual Leave'&&x.year===2027&&x.action==='earned').reduce((s,x)=>s+(x.amount||1),0); const annualUsed=data.filter(x=>x.type==='Annual Leave'&&x.year===2027&&x.action==='used').reduce((s,x)=>s+(x.amount||1),0); const annualAvailable=Math.max(0,annual2027-annualUsed);
+ const upcoming=active.filter(x=>x.expiry).sort((a,b)=>a.expiry.localeCompare(b.expiry)).slice(0,3);
+ root.innerHTML=`
+ <div class="leave-hero"><h1>Leave Tracker</h1><p>Track your leave balance, usage, FIFO, and expiry.</p></div>
+ <div class="leave-summary">
+   <div class="leave-card"><div class="kicker">Available Leave</div><div class="value">${dpAvailable+annualAvailable} days</div><small>Current active leave balance</small></div>
+   <div class="leave-card"><div class="kicker">DP</div><div class="value">+${dpAvailable} days</div><small>Earned ${dpEarned} · Used ${dpUsed}</small></div>
+   <div class="leave-card"><div class="kicker">Annual Leave</div><div class="value">${annualAvailable} days</div><small>${annual2027?'2027 entitlement configured':'Ready to configure'}</small></div>
+ </div>
+ <div class="leave-overview">
+   <section class="leave-panel leave-dp"><div class="leave-dp-top"><div><h2>DP</h2><p>FIFO · expires in 60 days</p></div><span class="leave-status">${dpAvailable?'Active':'Empty'}</span></div><div class="leave-big">${dpAvailable} days</div><p>available</p><div class="leave-breakdown"><div class="leave-break earned"><b>Earned</b><strong>${dpEarned} days</strong></div><div class="leave-break used"><b>Used</b><strong>${dpUsed} days</strong></div></div></section>
+   <section class="leave-panel"><div class="leave-dp-top"><div><h2>Annual Leave</h2><p>Annual entitlement</p></div><span class="leave-status" style="background:var(--surface-2);color:var(--muted)">${annual2027?'Configured':'Not configured'}</span></div><div class="leave-big">${annualAvailable} days</div><p>available</p><div class="leave-breakdown"><div class="leave-break"><b>Entitlement</b><strong>${annual2027} days</strong></div><div class="leave-break"><b>Used</b><strong>${annualUsed} days</strong></div></div></section>
+   <section class="leave-panel"><h2>Upcoming Expiry</h2><p>DP that will expire soon.</p><div class="leave-expiry-list">${upcoming.map(x=>{const d=leaveDaysLeft(x.expiry);return `<div class="leave-expiry"><div><strong>${escapeHtml(leaveFmt(x.date))} · DP</strong><small>Expires ${escapeHtml(leaveFmt(x.expiry))}</small></div><span class="days-left ${d<=7?'urgent':''}">${d} days left</span></div>`}).join('')||'<div class="empty">No active DP.</div>'}</div></section>
+ </div>
+ <section class="leave-activity" id="leaveActivity">
+   <div class="leave-activity-head" id="leaveActivityToggle"><div class="leave-activity-title"><span class="leave-activity-icon">${icon('total')}</span><div><h2>Leave Activity</h2><p>History of earned and used leave. Earned in green, used in red.</p></div></div><div class="leave-head-actions"><span class="leave-count">${data.length} records</span><span class="leave-chevron">⌄</span></div></div>
+   <div class="leave-activity-body"><div class="leave-tools"><select id="leaveTypeFilter"><option value="all">All Leave Types</option><option value="DP">DP</option><option value="Annual Leave">Annual Leave</option></select><button class="leave-add-btn" id="addLeaveBtn">＋ Add Leave</button></div><div class="leave-table-wrap"><table class="leave-table"><thead><tr><th>Date</th><th>Type</th><th>Activity</th><th>Change</th><th>Expiry</th><th>Status</th><th>Action</th></tr></thead><tbody id="leaveRows"></tbody></table></div></div>
+ </section>
+ <div class="leave-modal-backdrop" id="leaveModal"><div class="leave-modal"><div class="modal-title"><div><h2 id="leaveModalTitle">Add Leave</h2><p class="muted" style="margin:3px 0 0;font-size:10px">DP uses FIFO automatically when marked as Used.</p></div><button class="leave-modal-close" id="leaveModalClose" type="button">×</button></div><form id="leaveForm"><div class="form-grid"><div class="field"><label>Date *</label><input name="date" type="date" required></div><div class="field"><label>Type</label><select name="type"><option value="DP">DP</option><option value="Annual Leave">Annual Leave</option></select></div><div class="field full"><label>Activity *</label><input name="activity" required placeholder="Contoh: Event / Cuti / Sakit"></div><div class="field"><label>Action</label><select name="action"><option value="earned">Earned (+1)</option><option value="used">Used (-1)</option></select></div><div class="field"><label>Year</label><input name="year" type="number" min="2026" max="2100" value="2027"></div></div><div class="form-actions"><button type="button" class="btn" id="leaveCancel">Cancel</button><button class="btn primary" type="submit">Save Leave</button></div></form></div></div>`;
+ const modal=$('#leaveModal'), form=$('#leaveForm'), activity=$('#leaveActivity');
+ const closeModal=()=>{modal.classList.remove('open');form.reset();form.elements.date.value=iso(today);form.elements.type.value='DP';form.elements.action.value='earned';form.elements.year.value='2027';};
+ const openModal=(item=null)=>{if(item){form.elements.date.value=item.date;form.elements.type.value=item.type;form.elements.activity.value=item.activity;form.elements.action.value=item.action;form.elements.year.value=item.year||2027;form.dataset.editId=item.id;$('#leaveModalTitle').textContent='Edit Leave';}else{form.dataset.editId='';form.elements.date.value=iso(today);form.elements.type.value='DP';form.elements.activity.value='';form.elements.action.value='earned';form.elements.year.value='2027';$('#leaveModalTitle').textContent='Add Leave';}modal.classList.add('open');};
+ $('#addLeaveBtn').onclick=()=>openModal();$('#leaveModalClose').onclick=closeModal;$('#leaveCancel').onclick=closeModal;modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+ $('#leaveActivityToggle').onclick=e=>{if(e.target.closest('button,input,select,a'))return;const open=activity.classList.toggle('open');activity.querySelector('.leave-chevron')?.classList.toggle('open',open);try{localStorage.setItem('dailyflow_leave_activity_open',open?'1':'0')}catch{}};
+ const savedOpen=localStorage.getItem('dailyflow_leave_activity_open')==='1'; if(savedOpen){activity.classList.add('open');activity.querySelector('.leave-chevron')?.classList.add('open');}
+ function drawRows(){const filter=$('#leaveTypeFilter').value;const rows=data.filter(x=>filter==='all'||x.type===filter).sort((a,b)=>b.date.localeCompare(a.date));$('#leaveRows').innerHTML=rows.map(x=>{const expiry=x.action==='earned'&&x.type==='DP'?leaveDatePlus60(x.date):'';return `<tr><td>${escapeHtml(leaveFmt(x.date))}</td><td><span class="leave-pill ${x.type==='DP'?'dp':''}">${escapeHtml(x.type)}</span></td><td>${escapeHtml(x.activity)}</td><td><span class="leave-change ${x.action}">${x.action==='earned'?'+1':'-1'}</span></td><td>${expiry?escapeHtml(leaveFmt(expiry)):'—'}</td><td><span class="leave-status-pill ${x.action}">${x.action==='earned'?'Earned':'Used'}</span></td><td><div class="leave-action"><button class="btn small" data-leave-edit="${x.id}">Edit</button><button class="btn danger small" data-leave-delete="${x.id}">Delete</button></div></td></tr>`}).join('')||'<tr><td colspan="7"><div class="empty">No leave activity.</div></td></tr>';
+   $('#leaveRows').querySelectorAll('[data-leave-edit]').forEach(b=>b.onclick=()=>openModal(data.find(x=>x.id===b.dataset.leaveEdit)));
+   $('#leaveRows').querySelectorAll('[data-leave-delete]').forEach(b=>b.onclick=()=>{if(confirm('Delete this leave activity?')){const i=data.findIndex(x=>x.id===b.dataset.leaveDelete);if(i>-1){data.splice(i,1);leaveWrite(data);renderLeaveTracker();}}});
+ }
+ $('#leaveTypeFilter').onchange=drawRows;drawRows();
+ form.onsubmit=e=>{e.preventDefault();const f=e.currentTarget;const item={id:f.dataset.editId||crypto.randomUUID(),date:f.elements.date.value,type:f.elements.type.value,activity:f.elements.activity.value.trim(),action:f.elements.action.value,year:Number(f.elements.year.value)||2027};if(!item.date||!item.activity){toast('Date dan activity wajib diisi.');return;}if(item.type==='DP')delete item.year;const oldIndex=data.findIndex(x=>x.id===item.id);if(oldIndex>-1)data[oldIndex]=item;else data.push(item);leaveWrite(data);closeModal();renderLeaveTracker();toast(oldIndex>-1?'Leave updated.':'Leave added.');};
 }
 
-function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=new URLSearchParams(location.search).get('view')||document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,'important-data':renderImportantData,'leave-tracker':renderLeaveTracker,settings:renderSettings}[page]||renderDashboard)();}
+function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';if(location.hash==='#leave-tracker'){renderLeaveTracker();return;}({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,'important-data':renderImportantData,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
 try{const savedTheme=localStorage.getItem(KEYS.theme);if(savedTheme==='dark'||savedTheme==='light'){document.documentElement.dataset.theme=savedTheme;document.body.dataset.theme=savedTheme;}}catch{}
 document.addEventListener('DOMContentLoaded',()=>{renderPage();loadCreativeCalendarEvents();});
+window.addEventListener('hashchange',()=>renderPage());
 document.addEventListener('paste',handleScreenshotPaste);
 window.addEventListener('resize',()=>{if(document.body.dataset.page==='analytics')renderAnalytics();});
 })();
