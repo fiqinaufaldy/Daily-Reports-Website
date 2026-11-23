@@ -40,7 +40,7 @@ function syncProfileFavicon() {
     }
 
     favicon.type = 'image/webp';
-    favicon.href = 'assets/fnverse-logo-dark.webp?v=3';
+    favicon.href = 'assets/fnverse-favicon.png?v=1';
   } catch (error) {
     console.warn('Favicon FNVERSE tidak dapat diperbarui.', error);
   }
