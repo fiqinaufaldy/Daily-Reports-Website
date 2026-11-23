@@ -338,6 +338,8 @@ function injectLeaveStyles(){if(document.getElementById('leave-tracker-style'))r
 `;document.head.appendChild(st);}
 function renderLeaveTracker(){
   document.title = 'Daily Reports — Leave Tracker';
+  const leaveBrandLogo=document.querySelector('.brand-mark img');
+  if(leaveBrandLogo) leaveBrandLogo.src='assets/fnverse-logo-dark.webp';
   injectLeaveStyles();document.body.classList.add('leave-page');const root=$('#pageContent');if(!root)return;let data=leaveData();const calc=leaveCalc(data);const active=calc.active.filter(x=>x.expiry>=iso(today));
   const annualCalc=y=>{const items=data.filter(x=>x.type==='Annual Leave'&&((x.year||String(x.date||'').slice(0,4))==String(y)));const earned=items.filter(x=>x.action==='Earned').length;const used=items.filter(x=>x.action==='Used').length;return {earned,used,available:Math.max(0,earned-used)};};
   const annual=annualCalc(2026),annualNext=annualCalc(2027),annualTotal={earned:annual.earned+annualNext.earned,used:annual.used+annualNext.used,available:annual.available+annualNext.available};
