@@ -311,7 +311,6 @@ function refreshDashboardCalendar(animate=false){
 
 function leaveDatePlusDays(date, days){const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+days);return iso(d);}
 function seedLeaveData(){
-  const existing=read(KEYS.leaveTracker,null); if(Array.isArray(existing)) return existing;
   return [
     {id:crypto.randomUUID(),date:'2026-07-26',type:'DP',activity:'18 Hole',action:'Earned',change:1},
     {id:crypto.randomUUID(),date:'2026-08-10',type:'DP',activity:'DP',action:'Used',change:-1,reference:'2026-07-26'},
@@ -388,7 +387,7 @@ function renderLeaveTracker(){
       <h2>Annual Leave</h2><p>Annual leave entitlement</p>
       <div class="leave-big">${annualTotal.available} days</div><small>available</small>
       <div class="leave-split"><div class="leave-mini"><small>Earned</small><strong>${annualTotal.earned} days</strong></div><div class="leave-mini used-box"><small>Used</small><strong>${annualTotal.used} days</strong></div></div>
-      <div class="leave-year-split"><div class="leave-mini"><small>2026</small><strong>${annual.available} days</strong></div><div class="leave-mini"><small>2027</small><strong>${annualNext.available} days</strong></div></div>
+
     </section>
     <section class="leave-panel">
       <h2>Upcoming Expiry</h2><p>Day Payment that will expire soon.</p>
