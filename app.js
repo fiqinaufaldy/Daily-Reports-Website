@@ -379,7 +379,7 @@ function renderLeaveTracker(){
   </div>
   <div class="leave-overview">
     <section class="leave-panel dp-main">
-      <h2>Day Payment</h2><p>Replacement days earned for working on weekends or public holidays that were originally scheduled as days off.</p>
+      <h2>Day Payment</h2><p>Replacement days for weekend or public holiday work.</p>
       <div class="leave-big">${active.length} days</div><small>available</small>
       <div class="leave-split"><div class="leave-mini"><small>Earned</small><strong>${calc.earned.length} days</strong></div><div class="leave-mini used-box"><small>Used</small><strong>${calc.used.length} days</strong></div></div>
     </section>
@@ -391,7 +391,7 @@ function renderLeaveTracker(){
     </section>
     <section class="leave-panel">
       <h2>Upcoming Expiry</h2><p>Day Payment that will expire soon.</p>
-      <div class="expiry-list">${active.sort((a,b)=>a.expiry.localeCompare(b.expiry)).slice(0,3).map(x=>`<div class="expiry-item"><div><strong>${x.date.split('-').reverse().join('-')} · Day Payment</strong><small>Expires ${fmtDate(x.expiry,{day:'2-digit',month:'short',year:'numeric'})}</small></div><span class="expiry-days ${left(x.expiry)<=7?'danger':'safe'}">${left(x.expiry)} days left</span></div>`).join('')||'<div class="empty">Tidak ada Day Payment aktif.</div>'}</div>
+      <div class="expiry-list">${active.sort((a,b)=>a.expiry.localeCompare(b.expiry)).slice(0,3).map(x=>`<div class="expiry-item"><div><strong>${x.date.split('-').reverse().join('-')} · Day Payment</strong><small>Expires ${fmtDate(x.expiry,{day:'2-digit',month:'short',year:'numeric'})}</small></div><span class="expiry-days ${left(x.expiry)<=7?'danger':'safe'}">${left(x.expiry)} days left</span></div>`).join('')||'<div class="empty">No active Day Payment.</div>'}</div>
     </section>
   </div>
   <section class="leave-panel leave-activity" id="leaveActivity">
