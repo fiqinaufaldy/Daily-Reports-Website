@@ -327,7 +327,7 @@ function seedLeaveData(){
     {id:crypto.randomUUID(),date:'2026-11-22',type:'DP',activity:'Slow Sunday Vol. 4',action:'Earned',change:1}
   ];
 }
-function leaveData(){const d=read(KEYS.leaveTracker,null);const seedVersion='2026-11-23-v2';const storedVersion=read(KEYS.leaveTrackerSeedVersion,null);if(!Array.isArray(d)||storedVersion!==seedVersion){const seeded=seedLeaveData();write(KEYS.leaveTracker,seeded);write(KEYS.leaveTrackerSeedVersion,seedVersion);return seeded;}return d;}
+function leaveData(){const d=read(KEYS.leaveTracker,null);const seedVersion='2026-11-23-v3';const storedVersion=read(KEYS.leaveTrackerSeedVersion,null);if(!Array.isArray(d)||storedVersion!==seedVersion){const seeded=seedLeaveData();write(KEYS.leaveTracker,seeded);write(KEYS.leaveTrackerSeedVersion,seedVersion);return seeded;}return d;}
 function saveLeaveData(data){write(KEYS.leaveTracker,data);}
 function leaveCalc(data){
   const sorted=[...data].sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
