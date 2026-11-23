@@ -275,8 +275,8 @@ const save = () => {write(KEYS.activities,activities);write(KEYS.reminders,remin
 function applyTheme(theme){document.body.dataset.theme=theme;document.documentElement.dataset.theme=theme;const b=$('#themeToggle');if(b){b.innerHTML=icon(theme==='dark'?'light':'dark');b.title=theme==='dark'?'Aktifkan mode terang':'Aktifkan mode gelap';}try{localStorage.setItem(KEYS.theme,theme)}catch{}}
 function updateDateTime(){const dateText=$('#todayText');if(!dateText)return;const now=new Date();const date=new Intl.DateTimeFormat('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(now);const time=new Intl.DateTimeFormat('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);dateText.textContent=`${date} · ${time}`;}
 function shell(){
- const page=document.body.dataset.page||'dashboard';
- const links=[['dashboard','dashboard','Dashboard','index.html'],['calendar','calendar','Calendar','calendar.html'],['daily-report','report','Daily Report','daily-report.html'],['analytics','analytics','Analytics','analytics.html'],['reminder','reminder','Work Order & Reminder','reminder.html'],['documents','documents','Documents','documents.html'],['settings','settings','Settings','settings.html']];
+ const page=new URLSearchParams(location.search).get('view')||document.body.dataset.page||'dashboard';
+ const links=[['dashboard','dashboard','Dashboard','index.html'],['calendar','calendar','Calendar','calendar.html'],['daily-report','report','Daily Report','daily-report.html'],['analytics','analytics','Analytics','analytics.html'],['reminder','reminder','Work Order & Reminder','reminder.html'],['documents','documents','Documents','documents.html'],['leave-tracker','calendar','Leave Tracker','index.html?view=leave-tracker'],['settings','settings','Settings','settings.html']];
  const nav=$('#sidebarNav'); if(nav){let moreOpen=page==='important-data';try{moreOpen=moreOpen||sessionStorage.getItem('dailyflow_more_open')==='1'}catch{};nav.innerHTML=links.map(([id,iconName,label,url])=>`<a href="${url}" class="${page===id?'active':''}"><span class="nav-icon">${icon(iconName)}</span>${label}</a>`).join('')+`<div class="nav-group more-nav-group"><button type="button" id="moreMenuToggle" class="more-nav-toggle ${moreOpen?'is-open':''}" aria-expanded="${moreOpen}"><span class="nav-icon">${icon('more')}</span><span class="more-nav-label">More</span><svg class="more-nav-chevron ${moreOpen?'is-open':''}" id="moreMenuChevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="moreMenuItems" class="more-nav-items" style="display:${moreOpen?'block':'none'}"><a href="important-data.html" class="more-nav-item ${page==='important-data'?'active':''}"><span class="nav-icon">${icon('link')}</span><span>Important Links</span></a></div></div>`;$('#moreMenuToggle')?.addEventListener('click',()=>{const items=$('#moreMenuItems'),btn=$('#moreMenuToggle'),chevron=$('#moreMenuChevron');const open=items?.style.display==='none';if(items)items.style.display=open?'block':'none';btn?.setAttribute('aria-expanded',String(open));btn?.classList.toggle('is-open',open);chevron?.classList.toggle('is-open',open);try{sessionStorage.setItem('dailyflow_more_open',open?'1':'0')}catch{}});if(!document.getElementById('more-nav-style')){const st=document.createElement('style');st.id='more-nav-style';st.textContent=`.more-nav-group{margin-top:8px;padding-top:2px}.more-nav-toggle{width:calc(100% - 10px);margin:0 5px;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid transparent;background:transparent;color:inherit;font:inherit;font-size:inherit;font-weight:600;padding:13px 13px;border-radius:12px;cursor:pointer;transition:background .18s,color .18s,border-color .18s;min-height:46px}.more-nav-toggle .nav-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;flex:0 0 20px}.more-nav-toggle .nav-icon svg{width:20px;height:20px}.more-nav-toggle.is-open{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.035);color:inherit}.more-nav-toggle:hover{background:rgba(255,255,255,.06)}.more-nav-label{flex:1}.more-nav-chevron{width:15px;height:15px;flex:0 0 15px;transition:transform .18s;transform:rotate(0deg);opacity:.8}.more-nav-chevron.is-open{transform:rotate(180deg)}.more-nav-items{position:relative;margin:8px 0 7px 17px;padding:0 0 0 14px;border-left:1px solid rgba(160,190,169,.28)}.more-nav-item{display:flex!important;align-items:center;gap:10px;margin:4px 0;padding:12px 12px!important;border-radius:11px!important;text-decoration:none;min-height:44px;transition:background .18s,color .18s}.more-nav-item .nav-icon{display:inline-flex;align-items:center;justify-content:center;width:17px;flex:0 0 17px;opacity:.92}.more-nav-item .nav-icon svg{width:17px;height:17px;display:block;color:currentColor;stroke:currentColor}.more-nav-item .nav-icon svg [fill="currentColor"]{fill:currentColor}.more-nav-item.active{background:rgba(80,145,104,.24)!important;color:#8ED9B1!important;box-shadow:inset 0 0 0 1px rgba(115,190,143,.06)}.more-nav-item.active .nav-icon{color:#8ED9B1}.more-nav-item:not(.active):hover{background:rgba(255,255,255,.055);color:#e7f2eb!important}.more-nav-toggle:focus-visible,.more-nav-item:focus-visible{outline:2px solid #6bbd94;outline-offset:2px}@media(max-width:900px){.more-nav-toggle{padding:12px 11px}.more-nav-items{margin-left:13px;padding-left:11px}.more-nav-item{padding:11px 10px!important}}`;document.head.appendChild(st);}}
  updateDateTime(); if(!window.__dailyFlowClock){window.__dailyFlowClock=setInterval(updateDateTime,1000);}
  const greeting=$('#greeting');if(greeting){const h=new Date().getHours();greeting.textContent=(h<11?'Good Morning':h<15?'Good Afternoon':h<18?'Good Evening':'Good Night')+', '+(profile.name||'DailyFlow')+' ';const wave=document.createElement('span');wave.className='wave-hand';wave.textContent='👋';wave.setAttribute('aria-label','Waving hand');greeting.appendChild(wave);}
@@ -668,7 +668,144 @@ function renderImportantData(){
  renderRows();
 }
 
-function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,'important-data':renderImportantData,settings:renderSettings}[page]||renderDashboard)();}
+
+const LEAVE_TRACKER_KEY = 'dailyflow_leave_tracker_v1';
+const leaveInitialTransactions = [
+  {id:'dp-20260726',date:'2026-07-26',type:'DP',activity:'18 Hole',change:1},
+  {id:'dp-20260810',date:'2026-08-10',type:'DP',activity:'DP',change:-1},
+  {id:'dp-20260817',date:'2026-08-17',type:'DP',activity:'Upacara F9, Warrior Golf Balls',change:1},
+  {id:'dp-20260823',date:'2026-08-23',type:'DP',activity:'Slow Sunday Vol. 1',change:1},
+  {id:'dp-20260911',date:'2026-09-11',type:'DP',activity:'Sakit DP',change:-1},
+  {id:'dp-20260912',date:'2026-09-12',type:'DP',activity:'Donor Darah',change:1},
+  {id:'dp-20260926',date:'2026-09-26',type:'DP',activity:'Oktober Fest',change:1},
+  {id:'dp-20261005',date:'2026-10-05',type:'DP',activity:'DP Survey Venue',change:-1},
+  {id:'dp-20261010',date:'2026-10-10',type:'DP',activity:'Anniv BDG',change:1},
+  {id:'dp-20261025',date:'2026-10-25',type:'DP',activity:'Slow Sunday Vol. 3',change:1},
+  {id:'dp-20261026',date:'2026-10-26',type:'DP',activity:'DP',change:-1},
+  {id:'dp-20261122',date:'2026-11-22',type:'DP',activity:'Slow Sunday Vol. 4',change:1}
+];
+
+function leaveGetTransactions(){
+  try{
+    const raw=localStorage.getItem(LEAVE_TRACKER_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch{}
+  try{localStorage.setItem(LEAVE_TRACKER_KEY,JSON.stringify(leaveInitialTransactions));}catch{}
+  return leaveInitialTransactions.map(x=>({...x}));
+}
+function leaveSaveTransactions(items){
+  try{localStorage.setItem(LEAVE_TRACKER_KEY,JSON.stringify(items));return true;}catch{return false;}
+}
+function leaveDaysBetween(a,b){
+  return Math.floor((parseDate(b)-parseDate(a))/86400000);
+}
+function leaveExpiry(date){const d=parseDate(date);if(!d)return null;d.setDate(d.getDate()+60);return iso(d);}
+function leaveBuildDPState(transactions){
+  const queue=[];
+  const rows=[];
+  const sorted=[...transactions].sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));
+  const nowIso=iso(new Date());
+  sorted.forEach(tx=>{
+    if(tx.type!=='DP'){rows.push({...tx,status:'Recorded'});return;}
+    if(tx.change>0){
+      queue.push({id:tx.id,date:tx.date,expiry:leaveExpiry(tx.date),used:false});
+      rows.push({...tx,status:'Earned',expiry:leaveExpiry(tx.date)});
+    }else{
+      // FIFO: consume the oldest still-valid earned DP.
+      let idx=queue.findIndex(item=>!item.used && item.expiry>=tx.date);
+      if(idx>=0){
+        queue[idx].used=true;
+        rows.push({...tx,status:'Used',usedFrom:queue[idx].date});
+      }else{
+        rows.push({...tx,status:'Used',usedFrom:null});
+      }
+    }
+  });
+  const active=queue.filter(x=>!x.used && x.expiry>=nowIso).sort((a,b)=>a.date.localeCompare(b.date));
+  const expired=queue.filter(x=>!x.used && x.expiry<nowIso).sort((a,b)=>a.date.localeCompare(b.date));
+  return {rows,active,expired};
+}
+function leaveStatusBlock(change,status){
+  const isEarned=status==='Earned';
+  const bg=isEarned?'#e1f4ec':'#ffebed';
+  const fg=isEarned?'#208566':'#dc5a63';
+  const label=isEarned?`+${Math.abs(change)}`:`-${Math.abs(change)}`;
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:4px 9px;border-radius:8px;background:${bg};color:${fg};font-size:10px;font-weight:800">${label}</span>`;
+}
+function leaveDaysLeft(expiry){
+  const todayIso=iso(new Date());
+  return Math.max(0,leaveDaysBetween(todayIso,expiry));
+}
+function renderLeaveTracker(){
+  const root=$('#pageContent'); if(!root)return;
+  const intro=document.querySelector('.page-intro');
+  if(intro) intro.innerHTML=`<h1>Leave Tracker</h1><p>Track your leave balance, usage, FIFO, and expiry.</p>`;
+  const transactions=leaveGetTransactions();
+  const state=leaveBuildDPState(transactions);
+  const active=state.active;
+  const used=transactions.filter(x=>x.type==='DP'&&x.change<0).length;
+  const earned=transactions.filter(x=>x.type==='DP'&&x.change>0).length;
+  const nextExpiry=active[0]||null;
+  const annual2026=0, annual2027=0;
+  const upcoming=active.slice(0,3).map(item=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);margin-bottom:8px">
+      <div><strong style="font-size:11px">${escapeHtml(item.date)} · DP</strong><div style="font-size:10px;color:var(--muted);margin-top:2px">Expires ${fmtDate(item.expiry,{day:'2-digit',month:'short',year:'numeric'})}</div></div>
+      <span style="font-size:10px;font-weight:800;color:${leaveDaysLeft(item.expiry)<=7?'var(--red)':'var(--green)'}">${leaveDaysLeft(item.expiry)} days left</span>
+    </div>`).join('') || `<div class="empty">Tidak ada DP aktif.</div>`;
+
+  const history=[...state.rows].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>`
+    <tr>
+      <td>${fmtDate(r.date,{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td><span class="tag blue">DP</span></td>
+      <td>${escapeHtml(r.activity||'')}</td>
+      <td>${leaveStatusBlock(r.change,r.status)}</td>
+      <td>${r.status==='Earned' ? (r.expiry ? fmtDate(r.expiry,{day:'2-digit',month:'short',year:'numeric'}) : '—') : (r.usedFrom ? fmtDate(r.usedFrom,{day:'2-digit',month:'short',year:'numeric'}) : '—')}</td>
+      <td><span class="tag ${r.status==='Earned'?'done':'pending'}">${r.status}</span></td>
+    </tr>`).join('');
+
+  root.innerHTML=`
+    <div class="grid stats">
+      <div class="stat"><div class="stat-top">Available Leave <span class="stat-icon">${icon('calendar')}</span></div><strong>${active.length} days</strong><small>Current active leave balance</small></div>
+      <div class="stat"><div class="stat-top">DP <span class="stat-icon">${icon('calendar')}</span></div><strong>+${active.length} days</strong><small>${earned} earned · ${used} used</small></div>
+      <div class="stat"><div class="stat-top">Annual Leave 2026 <span class="stat-icon">${icon('calendar')}</span></div><strong>${annual2026} days</strong><small>Current year</small></div>
+      <div class="stat"><div class="stat-top">Annual Leave 2027 <span class="stat-icon">${icon('calendar')}</span></div><strong>${annual2027} days</strong><small>Ready to configure</small></div>
+    </div>
+
+    <section class="panel" style="margin-bottom:14px">
+      <div class="panel-head"><div><h2>Leave Overview</h2><p>Saldo leave dan aturan yang sedang berlaku.</p></div></div>
+      <div class="grid three-col">
+        <div style="border:1px solid var(--green);border-radius:15px;padding:16px;background:linear-gradient(135deg,var(--surface),var(--green-2))">
+          <div style="display:flex;justify-content:space-between;gap:10px"><div><strong style="font-size:14px">DP</strong><div style="font-size:10px;color:var(--muted)">FIFO · expires in 60 days</div></div><span class="tag done">Active</span></div>
+          <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">${active.length} days</strong>
+          <div style="font-size:10px;color:var(--muted)">available</div>
+        </div>
+        <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
+          <div style="display:flex;justify-content:space-between;gap:10px"><div><strong style="font-size:14px">Annual Leave 2027</strong><div style="font-size:10px;color:var(--muted)">Annual entitlement</div></div><span class="tag">Not configured</span></div>
+          <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">0 days</strong>
+          <div style="font-size:10px;color:var(--muted)">available</div>
+        </div>
+        <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
+          <div><strong style="font-size:14px">Upcoming Expiry</strong><div style="font-size:10px;color:var(--muted)">DP that will expire soon.</div></div>
+          <div style="margin-top:12px">${upcoming}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>Leave Activity</h2><p>History of earned and used leave. Earned is green, used is red.</p></div>
+        <span class="tag">FIFO · 60 Days</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" style="min-width:760px">
+          <thead><tr><th>Date</th><th>Type</th><th>Activity</th><th>Change</th><th>Reference</th><th>Status</th></tr></thead>
+          <tbody>${history}</tbody>
+        </table>
+      </div>
+    </section>`;
+}
+
+function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=new URLSearchParams(location.search).get('view')||document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,'important-data':renderImportantData,'leave-tracker':renderLeaveTracker,settings:renderSettings}[page]||renderDashboard)();}
 // Apply the saved theme before rendering page content to prevent theme resets/flicker on navigation.
 try{const savedTheme=localStorage.getItem(KEYS.theme);if(savedTheme==='dark'||savedTheme==='light'){document.documentElement.dataset.theme=savedTheme;document.body.dataset.theme=savedTheme;}}catch{}
 document.addEventListener('DOMContentLoaded',()=>{renderPage();loadCreativeCalendarEvents();});
