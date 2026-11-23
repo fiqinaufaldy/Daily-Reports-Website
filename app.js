@@ -740,69 +740,192 @@ function renderLeaveTracker(){
   const root=$('#pageContent'); if(!root)return;
   const intro=document.querySelector('.page-intro');
   if(intro) intro.innerHTML=`<h1>Leave Tracker</h1><p>Track your leave balance, usage, FIFO, and expiry.</p>`;
+
   const transactions=leaveGetTransactions();
   const state=leaveBuildDPState(transactions);
   const active=state.active;
   const used=transactions.filter(x=>x.type==='DP'&&x.change<0).length;
   const earned=transactions.filter(x=>x.type==='DP'&&x.change>0).length;
-  const nextExpiry=active[0]||null;
-  const annual2026=0, annual2027=0;
   const upcoming=active.slice(0,3).map(item=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);margin-bottom:8px">
-      <div><strong style="font-size:11px">${escapeHtml(item.date)} · DP</strong><div style="font-size:10px;color:var(--muted);margin-top:2px">Expires ${fmtDate(item.expiry,{day:'2-digit',month:'short',year:'numeric'})}</div></div>
-      <span style="font-size:10px;font-weight:800;color:${leaveDaysLeft(item.expiry)<=7?'var(--red)':'var(--green)'}">${leaveDaysLeft(item.expiry)} days left</span>
+    <div class="leave-expiry-row">
+      <div><strong>${escapeHtml(fmtDate(item.date,{day:'2-digit',month:'short',year:'numeric'}))} · DP</strong>
+      <div class="muted">Expires ${escapeHtml(fmtDate(item.expiry,{day:'2-digit',month:'short',year:'numeric'}))}</div></div>
+      <span class="leave-days ${leaveDaysLeft(item.expiry)<=7?'urgent':''}">${leaveDaysLeft(item.expiry)} days left</span>
     </div>`).join('') || `<div class="empty">Tidak ada DP aktif.</div>`;
 
   const history=[...state.rows].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>`
     <tr>
       <td>${fmtDate(r.date,{day:'2-digit',month:'short',year:'numeric'})}</td>
-      <td><span class="tag blue">DP</span></td>
+      <td><span class="tag blue">${escapeHtml(r.type||'DP')}</span></td>
       <td>${escapeHtml(r.activity||'')}</td>
       <td>${leaveStatusBlock(r.change,r.status)}</td>
       <td>${r.status==='Earned' ? (r.expiry ? fmtDate(r.expiry,{day:'2-digit',month:'short',year:'numeric'}) : '—') : (r.usedFrom ? fmtDate(r.usedFrom,{day:'2-digit',month:'short',year:'numeric'}) : '—')}</td>
       <td><span class="tag ${r.status==='Earned'?'done':'pending'}">${r.status}</span></td>
+      <td class="leave-actions-cell"><button type="button" class="leave-edit-btn" data-leave-edit="${escapeHtml(r.id)}">Edit</button></td>
     </tr>`).join('');
 
   root.innerHTML=`
-    <div class="grid stats">
-      <div class="stat"><div class="stat-top">Available Leave <span class="stat-icon">${icon('calendar')}</span></div><strong>${active.length} days</strong><small>Current active leave balance</small></div>
-      <div class="stat"><div class="stat-top">DP <span class="stat-icon">${icon('calendar')}</span></div><strong>+${active.length} days</strong><small>${earned} earned · ${used} used</small></div>
-      <div class="stat"><div class="stat-top">Annual Leave 2026 <span class="stat-icon">${icon('calendar')}</span></div><strong>${annual2026} days</strong><small>Current year</small></div>
-      <div class="stat"><div class="stat-top">Annual Leave 2027 <span class="stat-icon">${icon('calendar')}</span></div><strong>${annual2027} days</strong><small>Ready to configure</small></div>
+<style id="leave-tracker-inline-style">
+.leave-expiry-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);margin-bottom:8px}
+.leave-expiry-row strong{font-size:11px}.leave-expiry-row .muted{font-size:10px;margin-top:2px}.leave-days{font-size:10px;font-weight:800;color:var(--green)}.leave-days.urgent{color:var(--red)}
+.leave-overview-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(280px,.95fr);gap:16px}
+.leave-dp-card{border:1px solid var(--green);border-radius:15px;padding:16px;background:linear-gradient(135deg,var(--surface),var(--green-2))}
+.leave-dp-card .leave-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.leave-split-box{border-radius:12px;padding:12px 14px}.leave-split-box.earned{background:rgba(32,134,101,.22);border:1px solid rgba(74,210,137,.18)}.leave-split-box.used{background:rgba(196,72,80,.22);border:1px solid rgba(220,90,99,.18)}
+.leave-split-box .label{font-size:10px;color:var(--muted)}.leave-split-box strong{display:block;font-size:17px;margin-top:3px}
+.leave-activity-panel{overflow:hidden}.leave-activity-head{cursor:pointer;user-select:none}.leave-activity-head:hover{border-color:var(--green)}
+.leave-activity-chevron{transition:transform .18s ease}.leave-activity-panel.collapsed .leave-activity-chevron{transform:rotate(-90deg)}
+.leave-activity-panel.collapsed .leave-activity-body{display:none}
+.leave-activity-meta{display:flex;align-items:center;gap:8px}
+.leave-activity-body{padding-top:4px}
+.leave-table-actions{display:flex;align-items:center;gap:8px}
+.leave-edit-btn{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:8px;padding:5px 9px;font-size:10px;font-weight:800;cursor:pointer}.leave-edit-btn:hover{border-color:var(--green);color:var(--green)}
+.leave-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:12000}
+.leave-modal{width:min(520px,100%);background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.35);padding:20px}
+.leave-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.leave-modal-head h3{margin:0;font-size:17px}.leave-modal-head p{margin:5px 0 0;color:var(--muted);font-size:11px}.leave-modal-close{border:0;background:transparent;color:var(--muted);font-size:24px;cursor:pointer}
+.leave-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.leave-form .full{grid-column:1/-1}.leave-form label{display:block;font-size:10px;color:var(--muted);margin-bottom:6px}.leave-form input,.leave-form select{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);font:inherit;font-size:12px}
+.leave-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.leave-form-actions button{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:9px 14px;cursor:pointer;font:inherit;font-size:11px;font-weight:800}.leave-form-actions .primary{background:var(--green);border-color:var(--green);color:#07110b}
+@media(max-width:1000px){.leave-overview-grid{grid-template-columns:1fr 1fr}.leave-overview-grid> :last-child{grid-column:1/-1}}
+@media(max-width:700px){.leave-overview-grid{grid-template-columns:1fr}.leave-overview-grid> :last-child{grid-column:auto}.leave-dp-card .leave-split{grid-template-columns:1fr}.leave-form{grid-template-columns:1fr}.leave-form .full{grid-column:auto}.leave-activity-meta .tag{display:none}}
+</style>
+
+<div class="grid stats">
+  <div class="stat"><div class="stat-top">Available Leave <span class="stat-icon">${icon('calendar')}</span></div><strong>${active.length} days</strong><small>Current active leave balance</small></div>
+  <div class="stat"><div class="stat-top">DP <span class="stat-icon">${icon('calendar')}</span></div><strong>+${active.length} days</strong><small>${earned} earned · ${used} used</small></div>
+  <div class="stat"><div class="stat-top">Annual Leave 2026 <span class="stat-icon">${icon('calendar')}</span></div><strong>0 days</strong><small>Current year</small></div>
+  <div class="stat"><div class="stat-top">Annual Leave 2027 <span class="stat-icon">${icon('calendar')}</span></div><strong>0 days</strong><small>Ready to configure</small></div>
+</div>
+
+<section class="panel" style="margin-bottom:14px">
+  <div class="panel-head"><div><h2>Leave Overview</h2><p>Saldo leave dan aturan yang sedang berlaku.</p></div></div>
+  <div class="leave-overview-grid">
+    <div class="leave-dp-card">
+      <div style="display:flex;justify-content:space-between;gap:10px">
+        <div><strong style="font-size:14px">DP</strong><div style="font-size:10px;color:var(--muted)">FIFO · expires in 60 days</div></div>
+        <span class="tag done">Active</span>
+      </div>
+      <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">${active.length} days</strong>
+      <div style="font-size:10px;color:var(--muted)">available</div>
+      <div class="leave-split">
+        <div class="leave-split-box earned"><div class="label">Earned</div><strong>${earned} days</strong></div>
+        <div class="leave-split-box used"><div class="label">Used</div><strong>${used} days</strong></div>
+      </div>
     </div>
+    <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
+      <div style="display:flex;justify-content:space-between;gap:10px"><div><strong style="font-size:14px">Annual Leave 2027</strong><div style="font-size:10px;color:var(--muted)">Annual entitlement</div></div><span class="tag">Not configured</span></div>
+      <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">0 days</strong>
+      <div style="font-size:10px;color:var(--muted)">available</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px">
+        <div style="border-radius:12px;padding:12px;background:var(--surface-2)"><div style="font-size:10px;color:var(--muted)">Entitlement</div><strong>0 days</strong></div>
+        <div style="border-radius:12px;padding:12px;background:var(--surface-2)"><div style="font-size:10px;color:var(--muted)">Used</div><strong>0 days</strong></div>
+      </div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
+      <div><strong style="font-size:14px">Upcoming Expiry</strong><div style="font-size:10px;color:var(--muted)">DP that will expire soon.</div></div>
+      <div style="margin-top:12px">${upcoming}</div>
+    </div>
+  </div>
+</section>
 
-    <section class="panel" style="margin-bottom:14px">
-      <div class="panel-head"><div><h2>Leave Overview</h2><p>Saldo leave dan aturan yang sedang berlaku.</p></div></div>
-      <div class="grid three-col">
-        <div style="border:1px solid var(--green);border-radius:15px;padding:16px;background:linear-gradient(135deg,var(--surface),var(--green-2))">
-          <div style="display:flex;justify-content:space-between;gap:10px"><div><strong style="font-size:14px">DP</strong><div style="font-size:10px;color:var(--muted)">FIFO · expires in 60 days</div></div><span class="tag done">Active</span></div>
-          <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">${active.length} days</strong>
-          <div style="font-size:10px;color:var(--muted)">available</div>
-        </div>
-        <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
-          <div style="display:flex;justify-content:space-between;gap:10px"><div><strong style="font-size:14px">Annual Leave 2027</strong><div style="font-size:10px;color:var(--muted)">Annual entitlement</div></div><span class="tag">Not configured</span></div>
-          <strong style="display:block;font:800 27px Manrope,sans-serif;margin-top:12px">0 days</strong>
-          <div style="font-size:10px;color:var(--muted)">available</div>
-        </div>
-        <div style="border:1px solid var(--line);border-radius:15px;padding:16px;background:var(--surface)">
-          <div><strong style="font-size:14px">Upcoming Expiry</strong><div style="font-size:10px;color:var(--muted)">DP that will expire soon.</div></div>
-          <div style="margin-top:12px">${upcoming}</div>
-        </div>
+<section class="panel leave-activity-panel" id="leaveActivityPanel">
+  <div class="panel-head leave-activity-head" id="leaveActivityToggle" role="button" tabindex="0" aria-expanded="true">
+    <div><h2>Leave Activity</h2><p>History of earned and used leave. Earned is green, used is red.</p></div>
+    <div class="leave-activity-meta"><span class="tag">FIFO · 60 Days</span><span class="tag">${transactions.length} records</span><span class="leave-activity-chevron">⌄</span></div>
+  </div>
+  <div class="leave-activity-body">
+    <div class="panel-head" style="padding-top:0">
+      <div></div>
+      <div class="leave-table-actions">
+        <select id="leaveFilter" style="border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:10px;padding:8px 10px;font-size:11px">
+          <option value="ALL">All Leave Types</option><option value="DP">DP</option><option value="ANNUAL">Annual Leave</option>
+        </select>
+        <button type="button" class="btn primary" id="leaveAddBtn">＋ Add Leave</button>
       </div>
-    </section>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" style="min-width:900px">
+        <thead><tr><th>Date</th><th>Type</th><th>Activity</th><th>Change</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="leaveHistoryBody">${history}</tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <div><h2>Leave Activity</h2><p>History of earned and used leave. Earned is green, used is red.</p></div>
-        <span class="tag">FIFO · 60 Days</span>
+<div id="leaveModal" class="leave-modal-backdrop" hidden>
+  <div class="leave-modal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle">
+    <div class="leave-modal-head"><div><h3 id="leaveModalTitle">Add Leave</h3><p>DP uses FIFO automatically when marked as Used.</p></div><button type="button" class="leave-modal-close" id="leaveModalClose">×</button></div>
+    <form id="leaveForm">
+      <div class="leave-form">
+        <div><label for="leaveDate">Date</label><input id="leaveDate" type="date" required></div>
+        <div><label for="leaveType">Type</label><select id="leaveType"><option value="DP">DP</option><option value="ANNUAL">Annual Leave</option></select></div>
+        <div class="full"><label for="leaveActivity">Activity</label><input id="leaveActivity" placeholder="Contoh: Event / Cuti / Sakit" required></div>
+        <div><label for="leaveAction">Action</label><select id="leaveAction"><option value="earned">Earned (+1)</option><option value="used">Used (-1)</option></select></div>
+        <div><label for="leaveId">ID</label><input id="leaveId" type="text" readonly placeholder="Auto generated"></div>
       </div>
-      <div class="table-wrap">
-        <table class="data-table" style="min-width:760px">
-          <thead><tr><th>Date</th><th>Type</th><th>Activity</th><th>Change</th><th>Reference</th><th>Status</th></tr></thead>
-          <tbody>${history}</tbody>
-        </table>
-      </div>
-    </section>`;
+      <div class="leave-form-actions"><button type="button" id="leaveCancelBtn">Cancel</button><button type="submit" class="primary">Save Leave</button></div>
+    </form>
+  </div>
+</div>`;
+
+  const panel=$('#leaveActivityPanel');
+  const toggle=()=>{
+    const collapsed=panel.classList.toggle('collapsed');
+    $('#leaveActivityToggle')?.setAttribute('aria-expanded',String(!collapsed));
+    try{localStorage.setItem('dailyflow_leave_activity_collapsed_v1',collapsed?'1':'0')}catch{}
+  };
+  const savedCollapsed=localStorage.getItem('dailyflow_leave_activity_collapsed_v1')==='1';
+  if(savedCollapsed) panel.classList.add('collapsed');
+  $('#leaveActivityToggle')?.addEventListener('click',toggle);
+  $('#leaveActivityToggle')?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+
+  const openModal=(item=null)=>{
+    $('#leaveModal').hidden=false;
+    $('#leaveModalTitle').textContent=item?'Edit Leave':'Add Leave';
+    $('#leaveDate').value=item?.date||iso(new Date());
+    $('#leaveType').value=item?.type||'DP';
+    $('#leaveActivity').value=item?.activity||'';
+    $('#leaveAction').value=(item?.change||1)>0?'earned':'used';
+    $('#leaveId').value=item?.id||'';
+  };
+  const closeModal=()=>{$('#leaveModal').hidden=true;};
+  $('#leaveAddBtn')?.addEventListener('click',()=>openModal());
+  $('#leaveModalClose')?.addEventListener('click',closeModal);
+  $('#leaveCancelBtn')?.addEventListener('click',closeModal);
+  $('#leaveModal')?.addEventListener('click',e=>{if(e.target.id==='leaveModal')closeModal();});
+
+  $('#leaveForm')?.addEventListener('submit',e=>{
+    e.preventDefault();
+    const date=$('#leaveDate').value, type=$('#leaveType').value, activity=$('#leaveActivity').value.trim(), action=$('#leaveAction').value, id=$('#leaveId').value;
+    if(!date||!activity){toast('Date dan activity wajib diisi.');return;}
+    const change=action==='used'?-1:1;
+    let items=leaveGetTransactions();
+    const item={id:id||`leave-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,date,type,activity,change};
+    if(id) items=items.map(x=>x.id===id?item:x); else items.push(item);
+    if(leaveSaveTransactions(items)){closeModal();renderLeaveTracker();toast(id?'Leave updated.':'Leave added.');}
+    else toast('Leave belum tersimpan karena storage browser penuh.');
+  });
+
+  $('#leaveHistoryBody')?.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-leave-edit]');
+    if(!btn)return;
+    const item=leaveGetTransactions().find(x=>String(x.id)===String(btn.dataset.leaveEdit));
+    if(item)openModal(item);
+  });
+
+  $('#leaveFilter')?.addEventListener('change',()=>{
+    const filter=$('#leaveFilter').value;
+    const filtered=state.rows.filter(r=>filter==='ALL'||r.type===filter).sort((a,b)=>b.date.localeCompare(a.date));
+    $('#leaveHistoryBody').innerHTML=filtered.map(r=>`
+      <tr>
+        <td>${fmtDate(r.date,{day:'2-digit',month:'short',year:'numeric'})}</td>
+        <td><span class="tag blue">${escapeHtml(r.type||'DP')}</span></td>
+        <td>${escapeHtml(r.activity||'')}</td>
+        <td>${leaveStatusBlock(r.change,r.status)}</td>
+        <td>${r.status==='Earned' ? (r.expiry ? fmtDate(r.expiry,{day:'2-digit',month:'short',year:'numeric'}) : '—') : (r.usedFrom ? fmtDate(r.usedFrom,{day:'2-digit',month:'short',year:'numeric'}) : '—')}</td>
+        <td><span class="tag ${r.status==='Earned'?'done':'pending'}">${r.status}</span></td>
+        <td class="leave-actions-cell"><button type="button" class="leave-edit-btn" data-leave-edit="${escapeHtml(r.id)}">Edit</button></td>
+      </tr>`).join('');
+  });
 }
 
 function renderPage(){applyCalendarColors();shell();initNotificationDropdown();const page=new URLSearchParams(location.search).get('view')||document.body.dataset.page||'dashboard';({dashboard:renderDashboard,calendar:renderCalendarPage,'daily-report':renderDailyReport,analytics:renderAnalytics,reminder:renderReminders,documents:renderDocuments,'important-data':renderImportantData,'leave-tracker':renderLeaveTracker,settings:renderSettings}[page]||renderDashboard)();}
